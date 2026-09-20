@@ -1,0 +1,2 @@
+'use client';
+export default function ErrorPage({reset}:{error:Error&{digest?:string};reset:()=>void}){return <div className="error-screen"><span className="micro-label">trace interrupted</span><strong aria-hidden>500</strong><h1>The clearing desk lost this signal.</h1><p>The underlying record was not changed. Retry the read, then inspect API and worker logs if the interruption remains.</p><button onClick={reset}>Re-open trace</button></div>}

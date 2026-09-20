@@ -1,0 +1,155 @@
+# fintech-lab
+
+`fintech-lab` is a local, self-contained merchant payment platform for studying real payment engineering. It is a NestJS modular monolith with a deliberately separate Mock PSP adapter, PostgreSQL double-entry ledger, durable webhook inbox and transactional outbox, BullMQ workers, settlement/payout workflows, reconciliation, failure injection, and a Next.js inspection dashboard.
+
+No real money moves. No raw card number, CVV, or bank credential is accepted or stored.
+
+## System map
+
+```mermaid
+flowchart LR
+  Merchant --> API[NestJS API]
+  API --> DB[(PostgreSQL)]
+  DB --> Outbox
+  Outbox --> Worker[BullMQ worker]
+  Worker --> PSP[Mock PSP adapter]
+  PSP --> Inbox[Signed webhook inbox]
+  Inbox --> Payment[Payment state]
+  Inbox --> Ledger[Double-entry ledger]
+  Ledger --> Settlement
+  Settlement --> Available[Available balance]
+  Available --> Payout
+  DB --> Dashboard[Next.js trace dashboard]
+  Worker -. scheduling .-> Redis[(Redis)]
+```
+
+The important separations are enforced in code: payment state is not ledger state; captured is not settled; settled is not paid out; a provider response is not the platform's source of truth; and retries are safe only where PostgreSQL idempotency/uniqueness protects the effect.
+
+## Modules
+
+- Auth and merchant tenancy: API-key hash lookup, roles, and development users.
+- Payments: strict authorization/capture state machine and partial capture.
+- Payment Provider: interface token plus deterministic Mock PSP adapter.
+- Webhooks: raw-body HMAC verification, durable inbox, duplicate and out-of-order handling.
+- Ledger and balances: immutable, database-balanced journals; pending/available derived from entries.
+- Refunds and disputes: partial/full refund limits and compensating journals.
+- Settlements and payouts: T+N grouping, availability, advisory-lock payout reservation.
+- Outbox and jobs: crash-safe intent publication, leases, bounded backoff, dead records.
+- Reconciliation: provider/internal comparison and explicit issue resolution.
+- Audit and observability: immutable action log, correlation IDs, JSON logs, local metrics.
+
+## Prerequisites
+
+- Node.js 22 or newer (verified with Node 24)
+- pnpm 10
+- Docker Desktop or another PostgreSQL 17 and Redis 7 installation
+
+## Start locally
+
+```bash
+pnpm install
+docker compose up -d
+pnpm db:migrate
+pnpm db:seed
+```
+
+Run these in separate terminals:
+
+```bash
+pnpm dev:api
+pnpm dev:worker
+pnpm dev:web
+```
+
+- Dashboard: `http://localhost:3000`
+- API: `http://localhost:4000/api/v1`
+- Swagger: `http://localhost:4000/docs`
+- Health: `http://localhost:4000/api/v1/health`
+- Metrics: `http://localhost:4000/api/v1/metrics`
+
+The seed prints the demo identities and API key. Defaults also live in `.env.example`; the seeded merchant key is intentionally local-only.
+
+## Demo scenarios
+
+With the API and worker running:
+
+```bash
+pnpm demo success
+pnpm demo decline
+pnpm demo timeout
+pnpm demo response_lost
+pnpm demo delayed_webhook
+pnpm demo duplicate_webhook
+pnpm demo temporary_500
+pnpm demo amount_mismatch
+pnpm demo out_of_order
+pnpm demo reconciliation_mismatch
+pnpm demo full_flow
+```
+
+`full_flow` creates and immediately captures a payment, waits for provider webhooks, settles it, applies a partial refund, and requests a payout. Development endpoints are disabled when `NODE_ENV=production`.
+
+Manual API example:
+
+```bash
+curl -X POST http://localhost:4000/api/v1/payments \
+  -H "x-api-key: fl_test_demo_6f414a845fe04eb4" \
+  -H "Idempotency-Key: order-2026-001" \
+  -H "Content-Type: application/json" \
+  -d '{"amount":10000,"currency":"USD","paymentMethodToken":"pm_mock_visa","captureMethod":"MANUAL"}'
+```
+
+## Database and migrations
+
+The Drizzle schema is in `apps/api/src/database/schema.ts`. Checked-in SQL lives in `apps/api/drizzle/`. The initial migration adds protections Drizzle cannot express directly: a deferred balance trigger, immutable ledger/audit triggers, protected webhook evidence, platform/merchant account uniqueness, and missing self/cross references.
+
+```bash
+pnpm db:generate  # only after intentional schema changes
+pnpm db:migrate
+pnpm db:seed
+```
+
+Do not regenerate the initial migration without preserving its hand-authored financial triggers.
+
+## Tests and checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Database race tests are opt-in so unit tests do not silently depend on local infrastructure:
+
+```bash
+RUN_DB_TESTS=1 pnpm --filter @fintech-lab/api test:integration
+```
+
+On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves deferred ledger balance rejection, concurrent payout reservation, concurrent refund limits, and webhook inbox deduplication against PostgreSQL.
+
+## Learning map
+
+| Concept | Start here |
+| --- | --- |
+| System boundaries | `docs/architecture.md`, `apps/api/src/app.module.ts` |
+| Authorization/capture | `apps/api/src/payments/payment-state.machine.ts`, `payments.service.ts` |
+| Provider abstraction | `apps/api/src/payment-provider/payment-provider.types.ts`, `mock-psp.provider.ts` |
+| API idempotency | `apps/api/src/common/idempotency.service.ts`, `docs/webhooks-and-idempotency.md` |
+| Transactional outbox | `apps/api/src/outbox/outbox.service.ts`, `outbox-dispatcher.service.ts` |
+| Webhook inbox | `apps/api/src/webhooks/webhook-receiver.service.ts`, `webhook-processor.service.ts` |
+| Double-entry ledger | `apps/api/src/ledger/ledger.service.ts`, `docs/ledger.md` |
+| Database invariants | `apps/api/drizzle/0000_cheerful_sunset_bain.sql` |
+| Refund accounting | `apps/api/src/refunds/refunds.service.ts` |
+| Dispute holds | `apps/api/src/disputes/disputes.service.ts` |
+| Settlement | `apps/api/src/settlements/settlements.service.ts` |
+| Payout concurrency | `apps/api/src/payouts/payouts.service.ts`, `docs/concurrency.md` |
+| Reconciliation | `apps/api/src/reconciliation/reconciliation.service.ts` |
+| Failure simulation | `apps/api/src/payment-provider/mock-psp.provider.ts`, `scripts/demo.mjs` |
+| End-to-end visual trace | `apps/web/app/payments/[id]/page.tsx` |
+
+## Intentional simplifications
+
+The Mock PSP shares a database deployment for inspectability but owns separate provider records and is only reached through the provider interface. Interactive production authentication, key rotation UI, KYC/AML, real card tokenization, scheme clearing files, reserves, multi-region processing, FX, and real bank rails are out of scope. The local metrics endpoint is intentionally small rather than a full OpenTelemetry stack. See `/docs` for where production behavior would differ.
+
+Security and legal/compliance notes are educational templates requiring human review; this repository makes no production-readiness or compliance claim.

@@ -1,0 +1,2 @@
+'use client';
+export default function GlobalError({reset}:{error:Error&{digest?:string};reset:()=>void}){return <html><body><div className="error-screen"><span className="micro-label">system boundary failed</span><strong aria-hidden>500</strong><h1>The trace system could not start.</h1><p>No financial state was inferred from this UI failure. Check the local API and try again.</p><button onClick={reset}>Retry the desk</button></div></body></html>}

@@ -1,0 +1,21 @@
+{
+  "name": "fintech-lab",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.26.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @fintech-lab/api --filter @fintech-lab/web dev",
+    "dev:api": "pnpm --filter @fintech-lab/api dev",
+    "dev:web": "pnpm --filter @fintech-lab/web dev",
+    "dev:worker": "pnpm --filter @fintech-lab/api worker:dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "demo": "node scripts/demo.mjs",
+    "db:generate": "pnpm --filter @fintech-lab/api db:generate",
+    "db:migrate": "pnpm --filter @fintech-lab/api db:migrate",
+    "db:seed": "pnpm --filter @fintech-lab/api db:seed"
+  }
+}
