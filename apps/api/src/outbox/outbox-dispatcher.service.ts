@@ -3,10 +3,8 @@ import { DomainError } from '../common/domain-error';
 import { DatabaseService } from '../database/database.service';
 import { PayoutsService } from '../payouts/payouts.service';
 import {
-  PAYMENT_PROVIDER, PaymentProvider, ProviderOperationInput, RetryableProviderError, UnknownProviderOutcomeError,
+  PAYMENT_PROVIDER, PaymentProvider, PermanentProviderError, ProviderOperation, ProviderOperationInput, ProviderResult, RetryableProviderError, UnknownProviderOutcomeError,
 } from '../payment-provider/payment-provider.types';
-import { WebhookReceiverService } from '../webhooks/webhook-receiver.service';
-import type { MockPspEvent } from '../webhooks/webhook.types';
 
 interface OutboxRow { id: string; event_type: string; aggregate_id: string; payload: Record<string, unknown>; attempts: number }
 
@@ -16,7 +14,6 @@ export class OutboxDispatcherService {
   constructor(
     private readonly database: DatabaseService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
-    private readonly receiver: WebhookReceiverService,
     private readonly payouts: PayoutsService,
   ) {}
 
@@ -29,10 +26,7 @@ export class OutboxDispatcherService {
         await this.database.sql`update outbox_events set status='PUBLISHED', published_at=now(), locked_at=null, updated_at=now() where id=${event.id}`;
         processed += 1;
       } catch (error) {
-        if (error instanceof UnknownProviderOutcomeError) {
-          await this.database.sql`update outbox_events set status='PUBLISHED', published_at=now(), locked_at=null, last_error=${error.message}, updated_at=now() where id=${event.id}`;
-          processed += 1;
-        } else await this.fail(event, error);
+        await this.fail(event, error);
       }
     }
     return processed;
@@ -54,21 +48,19 @@ export class OutboxDispatcherService {
         refundId: this.optionalString(payload.refundId),
         amount: Number(payload.amount), currency: this.requiredString(payload.currency, 'currency'),
         paymentMethodToken: this.optionalString(payload.paymentMethodToken),
-        idempotencyKey: this.requiredString(payload.idempotencyKey, 'idempotencyKey'), scenario: this.requiredString(payload.scenario ?? 'SUCCESS', 'scenario') as ProviderOperationInput['scenario'],
-        attemptNumber: event.attempts,
+        providerPaymentId: this.optionalString(payload.providerPaymentId),
+        finalCapture: typeof payload.finalCapture === 'boolean' ? payload.finalCapture : undefined,
+        idempotencyKey: this.requiredString(payload.idempotencyKey, 'idempotencyKey'),
       };
-      const result = event.event_type === 'provider.authorization.requested' ? await this.provider.authorize(input)
-        : event.event_type === 'provider.capture.requested' ? await this.provider.capture(input)
-          : event.event_type === 'provider.refund.requested' ? await this.provider.refund(input)
+      const operation = this.operation(event.event_type);
+      const result = operation === 'AUTHORIZE' ? await this.provider.authorize(input)
+        : operation === 'CAPTURE' ? await this.provider.capture(input)
+          : operation === 'REFUND' ? await this.provider.refund(input)
             : await this.provider.cancel(input);
-      if (input.attemptId) await this.database.sql`update payment_attempts set status='PROCESSING', provider_transaction_id=${result.providerTransactionId}, updated_at=now() where id=${input.attemptId} and status='PENDING'`;
-      if (input.refundId) await this.database.sql`update refunds set status='PROCESSING', provider_transaction_id=${result.providerTransactionId}, updated_at=now() where id=${input.refundId} and status='PENDING'`;
-      return;
-    }
-    if (event.event_type === 'mock_psp.webhook') {
-      const mockEvent = payload.event as MockPspEvent; const raw = JSON.stringify(mockEvent); const signature = this.receiver.sign(raw);
-      await this.receiver.receive(raw, signature, { 'x-mock-delivery': 'outbox' });
-      if (payload.duplicate === true) await this.receiver.receive(raw, signature, { 'x-mock-delivery': 'duplicate' });
+      await this.storeProviderMirror(input, operation, result);
+      const providerPaymentId = result.paymentIntentId ?? result.providerObjectId;
+      if (input.attemptId) await this.database.sql`update payment_attempts set status='PROCESSING', provider_transaction_id=${providerPaymentId}, updated_at=now() where id=${input.attemptId} and status='PENDING'`;
+      if (input.refundId) await this.database.sql`update refunds set status='PROCESSING', provider_transaction_id=${result.providerObjectId}, updated_at=now() where id=${input.refundId} and status='PENDING'`;
       return;
     }
     if (event.event_type === 'payout.process') {
@@ -78,9 +70,36 @@ export class OutboxDispatcherService {
     throw new DomainError('UNKNOWN_OUTBOX_EVENT', `Unknown outbox event ${event.event_type}`, 500);
   }
 
+  private operation(eventType: string): ProviderOperation {
+    if (eventType === 'provider.authorization.requested') return 'AUTHORIZE';
+    if (eventType === 'provider.capture.requested') return 'CAPTURE';
+    if (eventType === 'provider.refund.requested') return 'REFUND';
+    if (eventType === 'provider.void.requested') return 'VOID';
+    throw new DomainError('UNKNOWN_PROVIDER_COMMAND', `Unknown provider command ${eventType}`, 500);
+  }
+
+  private async storeProviderMirror(input: ProviderOperationInput, operation: ProviderOperation, result: ProviderResult): Promise<void> {
+    await this.database.sql`
+      insert into provider_transactions
+        (merchant_id, payment_id, payment_attempt_id, refund_id, provider, provider_transaction_id, payment_intent_id, charge_id,
+         provider_idempotency_key, operation, status, amount, currency, raw_response, last_synced_at)
+      values
+        (${input.merchantId}, ${input.paymentId}, ${input.attemptId ?? null}, ${input.refundId ?? null}, 'STRIPE', ${result.providerObjectId},
+         ${result.paymentIntentId ?? null}, ${result.chargeId ?? null}, ${input.idempotencyKey}, ${operation}, ${result.status}, ${input.amount},
+         ${input.currency}, ${this.database.sql.json(result.metadata)}, now())
+      on conflict (provider, provider_idempotency_key) do update set
+        provider_transaction_id=excluded.provider_transaction_id,
+        payment_intent_id=excluded.payment_intent_id,
+        charge_id=excluded.charge_id,
+        status=excluded.status,
+        raw_response=excluded.raw_response,
+        last_synced_at=now(),
+        updated_at=now()`;
+  }
+
   private async fail(event: OutboxRow, error: unknown): Promise<void> {
     const message = error instanceof Error ? error.message : 'Unknown outbox error';
-    const retryable = error instanceof RetryableProviderError || !(error instanceof DomainError);
+    const retryable = error instanceof RetryableProviderError || error instanceof UnknownProviderOutcomeError || !(error instanceof PermanentProviderError || error instanceof DomainError);
     const dead = event.attempts >= 8 || !retryable; const delaySeconds = Math.min(300, 2 ** event.attempts);
     await this.database.sql`update outbox_events set status=${dead ? 'DEAD' : 'PENDING'}, available_at=now()+(${delaySeconds}::text||' seconds')::interval, locked_at=null, last_error=${message}, updated_at=now() where id=${event.id}`;
     this.logger.warn({ outboxEventId: event.id, eventType: event.event_type, retryable, attempts: event.attempts, error: message }, 'Outbox dispatch failed');

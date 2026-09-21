@@ -1,6 +1,6 @@
 # Failure scenarios
 
-Status: current.
+Status: historical — describes the original Mock PSP branch, not `real-psp-stripe`.
 
 Each Mock PSP profile is deterministic and selectable per request with `scenario` or via development endpoints.
 
@@ -18,4 +18,4 @@ Each Mock PSP profile is deterministic and selectable per request with `scenario
 | `AMOUNT_MISMATCH` | provider report is inconsistent | reconciliation issue, no silent repair |
 | `UNEXPECTED_TRANSACTION` | report includes unknown payment | reconciliation issue |
 
-Development scenario endpoints are disabled when `NODE_ENV=production`.
+The real-PSP branch removes these request controls and development injection endpoints. Equivalent adapter/network outcomes are covered with mocked Stripe SDK tests.

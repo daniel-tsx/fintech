@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
-  boolean,
   check,
   index,
   integer,
@@ -84,18 +83,24 @@ export const paymentAttempts = pgTable('payment_attempts', {
   id: uuid('id').primaryKey().defaultRandom(), merchantId: uuid('merchant_id').notNull().references(() => merchants.id),
   paymentId: uuid('payment_id').notNull().references(() => payments.id), kind: text('kind').notNull(),
   status: operationStatus('status').notNull().default('PENDING'), amount: money('amount').notNull(), currency: text('currency').notNull(),
-  providerTransactionId: text('provider_transaction_id'), failureCode: text('failure_code'), scenario: text('scenario').notNull().default('SUCCESS'),
+  providerTransactionId: text('provider_transaction_id'), failureCode: text('failure_code'),
   createdAt: createdAt(), updatedAt: updatedAt(),
 }, (t) => [index('attempts_payment_idx').on(t.paymentId, t.createdAt)]);
 
 export const providerTransactions = pgTable('provider_transactions', {
   id: uuid('id').primaryKey().defaultRandom(), merchantId: uuid('merchant_id').notNull().references(() => merchants.id),
-  paymentId: uuid('payment_id').references(() => payments.id), refundId: uuid('refund_id'),
-  provider: text('provider').notNull().default('MOCK_PSP'), providerTransactionId: text('provider_transaction_id').notNull(),
+  paymentId: uuid('payment_id').references(() => payments.id), paymentAttemptId: uuid('payment_attempt_id').references(() => paymentAttempts.id), refundId: uuid('refund_id'),
+  provider: text('provider').notNull().default('STRIPE'), providerTransactionId: text('provider_transaction_id').notNull(),
+  paymentIntentId: text('payment_intent_id'), chargeId: text('charge_id'),
   providerIdempotencyKey: text('provider_idempotency_key').notNull(), operation: text('operation').notNull(),
   status: text('status').notNull(), amount: money('amount').notNull(), currency: text('currency').notNull(),
-  rawResponse: jsonb('raw_response').notNull().default({}), createdAt: createdAt(), updatedAt: updatedAt(),
-}, (t) => [uniqueIndex('provider_tx_id_unique').on(t.provider, t.providerTransactionId), uniqueIndex('provider_tx_idempotency_unique').on(t.provider, t.providerIdempotencyKey), index('provider_tx_payment_idx').on(t.paymentId)]);
+  rawResponse: jsonb('raw_response').notNull().default({}), lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }), createdAt: createdAt(), updatedAt: updatedAt(),
+}, (t) => [
+  uniqueIndex('provider_tx_idempotency_unique').on(t.provider, t.providerIdempotencyKey),
+  index('provider_tx_object_idx').on(t.provider, t.providerTransactionId),
+  index('provider_tx_payment_idx').on(t.paymentId),
+  index('provider_tx_attempt_idx').on(t.paymentAttemptId),
+]);
 
 export const refunds = pgTable('refunds', {
   id: uuid('id').primaryKey().defaultRandom(), merchantId: uuid('merchant_id').notNull().references(() => merchants.id),
@@ -193,10 +198,3 @@ export const auditLogs = pgTable('audit_logs', {
   actorId: text('actor_id'), action: text('action').notNull(), targetType: text('target_type').notNull(), targetId: text('target_id').notNull(),
   correlationId: text('correlation_id'), metadata: jsonb('metadata').notNull().default({}), createdAt: createdAt(),
 }, (t) => [index('audit_target_idx').on(t.targetType, t.targetId, t.createdAt)]);
-
-export const mockPspProfiles = pgTable('mock_psp_profiles', {
-  id: uuid('id').primaryKey().defaultRandom(), merchantId: uuid('merchant_id').references(() => merchants.id),
-  scenario: text('scenario').notNull(), remainingFailures: integer('remaining_failures').notNull().default(0),
-  webhookDelayMs: integer('webhook_delay_ms').notNull().default(0), duplicateWebhooks: boolean('duplicate_webhooks').notNull().default(false),
-  createdAt: createdAt(), updatedAt: updatedAt(),
-}, (t) => [uniqueIndex('mock_profile_merchant_unique').on(t.merchantId)]);

@@ -13,7 +13,6 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "demo": "node scripts/demo.mjs",
     "db:generate": "pnpm --filter @fintech-lab/api db:generate",
     "db:migrate": "pnpm --filter @fintech-lab/api db:migrate",
     "db:seed": "pnpm --filter @fintech-lab/api db:seed"

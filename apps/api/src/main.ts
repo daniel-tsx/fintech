@@ -12,7 +12,7 @@ async function bootstrap(): Promise<void> {
   app.enableCors({ origin: ['http://localhost:3000'], credentials: false });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
   app.useGlobalFilters(new DomainExceptionFilter());
-  const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('fintech-lab API').setDescription('Local payment-platform simulation. API acceptance is not final financial outcome.').setVersion('1.0').addApiKey({ type: 'apiKey', in: 'header', name: 'x-api-key' }).build());
+  const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('fintech-lab API').setDescription('Payment-platform learning API with an external Stripe boundary. API acceptance is not final financial outcome.').setVersion('1.0').addApiKey({ type: 'apiKey', in: 'header', name: 'x-api-key' }).build());
   SwaggerModule.setup('docs', app, document);
   await app.listen(Number(process.env.PORT ?? 4000));
 }

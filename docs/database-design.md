@@ -10,7 +10,8 @@ Status: current. The executable schema is in `apps/api/src/database/schema.ts`; 
 - `ledger_accounts`, `ledger_transactions`, `ledger_entries`
 - `webhook_events`, `idempotency_keys`, `outbox_events`
 - `reconciliation_runs`, `reconciliation_issues`, `audit_logs`
-- `mock_psp_profiles`
+
+`provider_transactions` stores local Stripe command references and last-known state. It is a cache/mirror, not the provider source of truth. Multiple command rows may reference the same PaymentIntent; provider idempotency keys, not provider object IDs, are unique per command.
 
 Every externally visible record uses UUIDs. Money columns are signed `bigint` minor units with a three-letter currency check. Cross-currency journals are forbidden. Foreign keys always include the owning merchant where practical, and service queries always scope by merchant.
 

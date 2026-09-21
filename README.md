@@ -1,6 +1,6 @@
 # fintech-lab
 
-`fintech-lab` is a local, self-contained merchant payment platform for studying real payment engineering. It is a NestJS modular monolith with a deliberately separate Mock PSP adapter, PostgreSQL double-entry ledger, durable webhook inbox and transactional outbox, BullMQ workers, settlement/payout workflows, reconciliation, failure injection, and a Next.js inspection dashboard.
+`fintech-lab` is a merchant payment-platform learning project. On the `real-psp-stripe` branch it is a NestJS modular monolith with a production-shaped external Stripe adapter, PostgreSQL double-entry ledger, durable webhook inbox and transactional outbox, BullMQ workers, settlement/payout workflows, reconciliation, and a Next.js inspection dashboard.
 
 No real money moves. No raw card number, CVV, or bank credential is accepted or stored.
 
@@ -12,8 +12,8 @@ flowchart LR
   API --> DB[(PostgreSQL)]
   DB --> Outbox
   Outbox --> Worker[BullMQ worker]
-  Worker --> PSP[Mock PSP adapter]
-  PSP --> Inbox[Signed webhook inbox]
+  Worker --> PSP[Stripe HTTPS API]
+  PSP --> Inbox[Stripe-signed webhook inbox]
   Inbox --> Payment[Payment state]
   Inbox --> Ledger[Double-entry ledger]
   Ledger --> Settlement
@@ -29,8 +29,8 @@ The important separations are enforced in code: payment state is not ledger stat
 
 - Auth and merchant tenancy: API-key hash lookup, roles, and development users.
 - Payments: strict authorization/capture state machine and partial capture.
-- Payment Provider: interface token plus deterministic Mock PSP adapter.
-- Webhooks: raw-body HMAC verification, durable inbox, duplicate and out-of-order handling.
+- Payment Provider: interface token plus official-SDK Stripe adapter.
+- Webhooks: Stripe raw-body signature verification, normalization, durable inbox, duplicate and out-of-order handling.
 - Ledger and balances: immutable, database-balanced journals; pending/available derived from entries.
 - Refunds and disputes: partial/full refund limits and compensating journals.
 - Settlements and payouts: T+N grouping, availability, advisory-lock payout reservation.
@@ -69,34 +69,18 @@ pnpm dev:web
 
 The seed prints the demo identities and API key. Defaults also live in `.env.example`; the seeded merchant key is intentionally local-only.
 
-## Demo scenarios
+## Local study mode
 
-With the API and worker running:
+The checked-in Stripe values are placeholders. Builds and automated tests do not make network calls. Running a provider command with those placeholders is intentionally not executable; use the mocked tests to study the lifecycle.
 
-```bash
-pnpm demo success
-pnpm demo decline
-pnpm demo timeout
-pnpm demo response_lost
-pnpm demo delayed_webhook
-pnpm demo duplicate_webhook
-pnpm demo temporary_500
-pnpm demo amount_mismatch
-pnpm demo out_of_order
-pnpm demo reconciliation_mismatch
-pnpm demo full_flow
-```
-
-`full_flow` creates and immediately captures a payment, waits for provider webhooks, settles it, applies a partial refund, and requests a payout. Development endpoints are disabled when `NODE_ENV=production`.
-
-Manual API example:
+An API intent can still be created for inspecting the local outbox transaction:
 
 ```bash
 curl -X POST http://localhost:4000/api/v1/payments \
   -H "x-api-key: fl_test_demo_6f414a845fe04eb4" \
   -H "Idempotency-Key: order-2026-001" \
   -H "Content-Type: application/json" \
-  -d '{"amount":10000,"currency":"USD","paymentMethodToken":"pm_mock_visa","captureMethod":"MANUAL"}'
+  -d '{"amount":10000,"currency":"USD","paymentMethodToken":"pm_test_placeholder","captureMethod":"MANUAL"}'
 ```
 
 ## Database and migrations
@@ -126,7 +110,7 @@ Database race tests are opt-in so unit tests do not silently depend on local inf
 RUN_DB_TESTS=1 pnpm --filter @fintech-lab/api test:integration
 ```
 
-On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves deferred ledger balance rejection, concurrent payout reservation, concurrent refund limits, and webhook inbox deduplication against PostgreSQL.
+On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves deferred ledger balance rejection, concurrent payout reservation, concurrent refund limits, signed Stripe webhook deduplication, and webhook-driven capture completion against PostgreSQL. No Stripe network call is made.
 
 ## Learning map
 
@@ -134,7 +118,8 @@ On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves de
 | --- | --- |
 | System boundaries | `docs/architecture.md`, `apps/api/src/app.module.ts` |
 | Authorization/capture | `apps/api/src/payments/payment-state.machine.ts`, `payments.service.ts` |
-| Provider abstraction | `apps/api/src/payment-provider/payment-provider.types.ts`, `mock-psp.provider.ts` |
+| Mock-to-Stripe differences | `docs/real-psp-stripe.md` |
+| Provider abstraction | `apps/api/src/payment-provider/payment-provider.types.ts`, `stripe-payment.provider.ts` |
 | API idempotency | `apps/api/src/common/idempotency.service.ts`, `docs/webhooks-and-idempotency.md` |
 | Transactional outbox | `apps/api/src/outbox/outbox.service.ts`, `outbox-dispatcher.service.ts` |
 | Webhook inbox | `apps/api/src/webhooks/webhook-receiver.service.ts`, `webhook-processor.service.ts` |
@@ -145,11 +130,11 @@ On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves de
 | Settlement | `apps/api/src/settlements/settlements.service.ts` |
 | Payout concurrency | `apps/api/src/payouts/payouts.service.ts`, `docs/concurrency.md` |
 | Reconciliation | `apps/api/src/reconciliation/reconciliation.service.ts` |
-| Failure simulation | `apps/api/src/payment-provider/mock-psp.provider.ts`, `scripts/demo.mjs` |
+| Stripe event translation | `apps/api/src/webhooks/stripe-event.normalizer.ts` |
 | End-to-end visual trace | `apps/web/app/payments/[id]/page.tsx` |
 
 ## Intentional simplifications
 
-The Mock PSP shares a database deployment for inspectability but owns separate provider records and is only reached through the provider interface. Interactive production authentication, key rotation UI, KYC/AML, real card tokenization, scheme clearing files, reserves, multi-region processing, FX, and real bank rails are out of scope. The local metrics endpoint is intentionally small rather than a full OpenTelemetry stack. See `/docs` for where production behavior would differ.
+Stripe owns provider execution; `provider_transactions` is only a local reference mirror. Real credentials, live calls, interactive customer authentication, key rotation UI, KYC/AML, card collection, provider settlement ingestion, real payouts, deployment, reserves, multi-region processing, FX, and bank rails are out of scope. See `docs/real-psp-stripe.md`.
 
 Security and legal/compliance notes are educational templates requiring human review; this repository makes no production-readiness or compliance claim.

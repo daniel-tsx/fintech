@@ -1,8 +1,5 @@
 import { Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min } from 'class-validator';
-import type { ProviderScenario } from '../../payment-provider/payment-provider.types';
-
-const SCENARIOS: ProviderScenario[] = ['SUCCESS', 'DECLINE', 'TIMEOUT_BEFORE_PROCESSING', 'PROCESSED_RESPONSE_LOST', 'DELAYED_WEBHOOK', 'DUPLICATE_WEBHOOK', 'OUT_OF_ORDER_WEBHOOK', 'TEMPORARY_500', 'REFUND_RETRY_THEN_SUCCESS', 'AMOUNT_MISMATCH', 'UNEXPECTED_TRANSACTION'];
 
 export class CreatePaymentDto {
   @Type(() => Number) @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) amount: number;
@@ -13,13 +10,8 @@ export class CreatePaymentDto {
   @IsOptional() @IsString() @MaxLength(500) description?: string;
   @IsOptional() @IsObject() metadata?: Record<string, unknown>;
   @IsOptional() @Type(() => Boolean) @IsBoolean() confirm = false;
-  @IsOptional() @IsIn(SCENARIOS) scenario: ProviderScenario = 'SUCCESS';
 }
 
-export class ProviderCommandDto {
-  @IsOptional() @IsIn(SCENARIOS) scenario: ProviderScenario = 'SUCCESS';
-}
-
-export class CapturePaymentDto extends ProviderCommandDto {
+export class CapturePaymentDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER) amount?: number;
 }

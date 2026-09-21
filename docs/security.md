@@ -10,6 +10,6 @@ Status: current; this is an educational control set, not a production compliance
 - Sensitive actions append immutable audit records without secrets.
 - Correlation IDs are accepted/generated and returned to callers.
 
-No raw PAN, CVV, bank credentials, or cardholder authentication data enters this system. `payment_method_token` is an opaque Mock PSP token. A production merchant client would tokenize sensitive data directly with a PCI-compliant provider-hosted component. This reduces scope but does not itself certify PCI compliance. Human review is required before using this design outside the lab.
+No raw PAN, CVV, bank credentials, or cardholder authentication data enters this system. `payment_method_token` is treated as an already-created Stripe PaymentMethod ID. A real merchant client would tokenize sensitive data directly with Stripe-hosted/client-side components, which this branch intentionally does not build. This reduces scope but does not itself certify PCI compliance. Human review is required before using this design outside the lab.
 
 The development user-header fallback is available only outside production. Production would use an external identity provider, short-lived sessions, MFA for administrators, key rotation/revocation workflows, managed secrets, and a formal authorization test matrix.

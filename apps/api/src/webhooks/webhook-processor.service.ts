@@ -2,10 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DomainError } from '../common/domain-error';
 import { DatabaseService } from '../database/database.service';
 import { WebhookBusinessService } from './webhook-business.service';
-import type { MockPspEvent } from './webhook.types';
+import type { ProviderEvent } from './webhook.types';
 import { RetryableWebhookError } from './webhook.types';
 
-interface InboxRow { id: string; payload: MockPspEvent; attempts: number }
+interface InboxRow { id: string; payload: ProviderEvent; attempts: number }
 
 @Injectable()
 export class WebhookProcessorService {
@@ -21,7 +21,7 @@ export class WebhookProcessorService {
           const [locked] = await tx<InboxRow[]>`select id, payload, attempts from webhook_events where id=${event.id} for update`;
           if (!locked || locked.payload.id !== event.payload.id) throw new Error('Webhook lease lost');
           await this.business.handle(tx, locked.payload);
-          const known = ['payment.authorized','payment.authorization_failed','payment.capture_succeeded','payment.capture_failed','payment.cancelled','refund.succeeded','refund.failed','dispute.opened','dispute.closed','settlement.completed'].includes(locked.payload.type);
+          const known = ['payment.authorized','payment.authorization_failed','payment.capture_succeeded','payment.capture_failed','payment.cancelled','refund.succeeded','refund.failed','dispute.opened','dispute.closed'].includes(locked.payload.type);
           await tx`update webhook_events set status=${known ? 'PROCESSED' : 'IGNORED'}, processed_at=now(), locked_at=null, updated_at=now() where id=${locked.id}`;
         });
         processed += 1;
