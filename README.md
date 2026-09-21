@@ -1,6 +1,6 @@
 # fintech-lab
 
-`fintech-lab` is a merchant payment-platform learning project. On the `real-psp-stripe` branch it is a NestJS modular monolith with a production-shaped external Stripe adapter, PostgreSQL double-entry ledger, durable webhook inbox and transactional outbox, BullMQ workers, settlement/payout workflows, reconciliation, and a Next.js inspection dashboard.
+`fintech-lab` is a merchant payment-platform learning project. On the `outbox-rabbitmq` branch it is a NestJS modular monolith with a PostgreSQL transactional outbox relay, RabbitMQ provider-command consumers, a production-shaped Stripe adapter, durable webhook inbox, double-entry ledger, BullMQ scheduled work, settlement/payout workflows, reconciliation, and a Next.js inspection dashboard.
 
 No real money moves. No raw card number, CVV, or bank credential is accepted or stored.
 
@@ -11,8 +11,10 @@ flowchart LR
   Merchant --> API[NestJS API]
   API --> DB[(PostgreSQL)]
   DB --> Outbox
-  Outbox --> Worker[BullMQ worker]
-  Worker --> PSP[Stripe HTTPS API]
+  Outbox --> Relay[Outbox relay]
+  Relay --> Rabbit[(RabbitMQ)]
+  Rabbit --> Consumer[Payment command consumer]
+  Consumer --> PSP[Stripe HTTPS API]
   PSP --> Inbox[Stripe-signed webhook inbox]
   Inbox --> Payment[Payment state]
   Inbox --> Ledger[Double-entry ledger]
@@ -20,6 +22,7 @@ flowchart LR
   Settlement --> Available[Available balance]
   Available --> Payout
   DB --> Dashboard[Next.js trace dashboard]
+  Inbox --> Worker[BullMQ scheduled worker]
   Worker -. scheduling .-> Redis[(Redis)]
 ```
 
@@ -34,7 +37,7 @@ The important separations are enforced in code: payment state is not ledger stat
 - Ledger and balances: immutable, database-balanced journals; pending/available derived from entries.
 - Refunds and disputes: partial/full refund limits and compensating journals.
 - Settlements and payouts: T+N grouping, availability, advisory-lock payout reservation.
-- Outbox and jobs: crash-safe intent publication, leases, bounded backoff, dead records.
+- Outbox, relay, and messaging: crash-safe intent publication, publisher confirms, RabbitMQ ACK/retry/DLQ, leases, and duplicate-safe provider execution.
 - Reconciliation: provider/internal comparison and explicit issue resolution.
 - Audit and observability: immutable action log, correlation IDs, JSON logs, local metrics.
 
@@ -42,7 +45,7 @@ The important separations are enforced in code: payment state is not ledger stat
 
 - Node.js 22 or newer (verified with Node 24)
 - pnpm 10
-- Docker Desktop or another PostgreSQL 17 and Redis 7 installation
+- PostgreSQL 17 and Redis 7 for the full local application; RabbitMQ is optional and needed only for manually running the relay/consumer path
 
 ## Start locally
 
@@ -58,6 +61,8 @@ Run these in separate terminals:
 ```bash
 pnpm dev:api
 pnpm dev:worker
+pnpm dev:relay
+pnpm dev:payment-consumer
 pnpm dev:web
 ```
 
@@ -71,7 +76,7 @@ The seed prints the demo identities and API key. Defaults also live in `.env.exa
 
 ## Local study mode
 
-The checked-in Stripe values are placeholders. Builds and automated tests do not make network calls. Running a provider command with those placeholders is intentionally not executable; use the mocked tests to study the lifecycle.
+The checked-in Stripe and RabbitMQ values are local placeholders. Builds and automated tests do not make broker or Stripe network calls. Running the relay/consumer against a real broker or executing a real provider command is intentionally outside automated verification; use the mocked tests to study the lifecycle.
 
 An API intent can still be created for inspecting the local outbox transaction:
 
@@ -119,9 +124,11 @@ On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves de
 | System boundaries | `docs/architecture.md`, `apps/api/src/app.module.ts` |
 | Authorization/capture | `apps/api/src/payments/payment-state.machine.ts`, `payments.service.ts` |
 | Mock-to-Stripe differences | `docs/real-psp-stripe.md` |
+| Polling-to-RabbitMQ differences | `docs/outbox-rabbitmq.md` |
 | Provider abstraction | `apps/api/src/payment-provider/payment-provider.types.ts`, `stripe-payment.provider.ts` |
 | API idempotency | `apps/api/src/common/idempotency.service.ts`, `docs/webhooks-and-idempotency.md` |
-| Transactional outbox | `apps/api/src/outbox/outbox.service.ts`, `outbox-dispatcher.service.ts` |
+| Transactional outbox relay | `apps/api/src/outbox/outbox.service.ts`, `outbox-relay.service.ts` |
+| RabbitMQ consumer | `apps/api/src/rabbitmq/rabbitmq.service.ts`, `apps/api/src/payment-commands/payment-command.consumer.ts` |
 | Webhook inbox | `apps/api/src/webhooks/webhook-receiver.service.ts`, `webhook-processor.service.ts` |
 | Double-entry ledger | `apps/api/src/ledger/ledger.service.ts`, `docs/ledger.md` |
 | Database invariants | `apps/api/drizzle/0000_cheerful_sunset_bain.sql` |
@@ -135,6 +142,6 @@ On PowerShell use `$env:RUN_DB_TESTS='1'` first. The integration suite proves de
 
 ## Intentional simplifications
 
-Stripe owns provider execution; `provider_transactions` is only a local reference mirror. Real credentials, live calls, interactive customer authentication, key rotation UI, KYC/AML, card collection, provider settlement ingestion, real payouts, deployment, reserves, multi-region processing, FX, and bank rails are out of scope. See `docs/real-psp-stripe.md`.
+Stripe owns provider execution; `provider_transactions` is only a local reference mirror. RabbitMQ is not provisioned or deployed by this branch. Real credentials, live calls, interactive customer authentication, key rotation UI, KYC/AML, card collection, provider settlement ingestion, real payouts, deployment, reserves, multi-region processing, FX, and bank rails are out of scope. See `docs/outbox-rabbitmq.md` and `docs/real-psp-stripe.md`.
 
 Security and legal/compliance notes are educational templates requiring human review; this repository makes no production-readiness or compliance claim.

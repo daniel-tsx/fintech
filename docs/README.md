@@ -2,6 +2,7 @@
 
 Status: current.
 
+- [Transactional outbox to RabbitMQ](outbox-rabbitmq.md) - relay, topology, ACK/retry/DLQ, and diff-based learning map.
 - [Architecture](architecture.md) — boundaries, runtime topology, and design decisions.
 - [Real PSP: Stripe](real-psp-stripe.md) — branch-specific external provider boundary and learning map.
 - [Database design](database-design.md) — tables, constraints, locks, and immutability.

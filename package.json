@@ -9,6 +9,8 @@
     "dev:api": "pnpm --filter @fintech-lab/api dev",
     "dev:web": "pnpm --filter @fintech-lab/web dev",
     "dev:worker": "pnpm --filter @fintech-lab/api worker:dev",
+    "dev:relay": "pnpm --filter @fintech-lab/api relay:dev",
+    "dev:payment-consumer": "pnpm --filter @fintech-lab/api payment-consumer:dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

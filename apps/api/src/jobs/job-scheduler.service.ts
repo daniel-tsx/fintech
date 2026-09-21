@@ -8,7 +8,7 @@ export class JobSchedulerService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const defaults = { attempts: 3, backoff: { type: 'exponential' as const, delay: 1_000 }, removeOnComplete: 100, removeOnFail: 500 };
     await Promise.all([
-      this.queue.add('outbox-poll', {}, { ...defaults, jobId: 'outbox-poll', repeat: { every: 1_000 } }),
+      this.queue.add('internal-outbox-poll', {}, { ...defaults, jobId: 'internal-outbox-poll', repeat: { every: 1_000 } }),
       this.queue.add('webhook-poll', {}, { ...defaults, jobId: 'webhook-poll', repeat: { every: 1_000 } }),
       this.queue.add('settlement-poll', {}, { ...defaults, jobId: 'settlement-poll', repeat: { every: 60_000 } }),
       this.queue.add('reconciliation-poll', {}, { ...defaults, jobId: 'reconciliation-poll', repeat: { every: 300_000 } }),

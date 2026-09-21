@@ -2,7 +2,7 @@
 
 Status: current.
 
-`fintech-lab` is a modular monolith with an external Stripe provider boundary on this learning branch. The HTTP API accepts merchant intent, PostgreSQL commits business state plus outbox messages, and workers perform provider, webhook, settlement, payout, and reconciliation work. Redis/BullMQ improves scheduling and retry ergonomics; PostgreSQL remains the durable internal correctness boundary.
+`fintech-lab` is a modular monolith with an external Stripe provider boundary on this learning branch. The HTTP API accepts merchant intent, PostgreSQL commits business state plus outbox messages, an outbox relay confirm-publishes provider commands to RabbitMQ, and dedicated consumers call Stripe. Redis/BullMQ remains only for scheduled webhook, settlement, reconciliation, and internal payout work. PostgreSQL remains the durable internal correctness boundary.
 
 ```mermaid
 flowchart LR
@@ -10,8 +10,10 @@ flowchart LR
   M --> API[NestJS API]
   API --> DB[(PostgreSQL)]
   DB --> OB[Transactional outbox]
-  OB --> W[BullMQ workers]
-  W --> PA[PaymentProvider port]
+  OB --> OR[Outbox relay]
+  OR --> RMQ[(RabbitMQ)]
+  RMQ --> PC[Payment command consumers]
+  PC --> PA[PaymentProvider port]
   PA --> PSP[Stripe HTTPS API]
   PSP --> WH[Stripe-signed webhook inbox]
   WH --> DB
@@ -20,16 +22,20 @@ flowchart LR
   S --> B[Available balance]
   B --> P[Payout]
   DB --> UI[Next.js trace dashboard]
+  DB --> W[BullMQ scheduled worker]
   W -. scheduling only .-> R[(Redis)]
 ```
 
 ## Runtime units
 
 - `apps/api`: NestJS modular monolith and Swagger API.
-- `apps/api/src/worker.ts`: a separate Nest application context running processors and polling safety nets.
+- `apps/api/src/worker.ts`: a separate Nest application context for BullMQ-scheduled webhook, settlement, reconciliation, and internal payout work.
+- `apps/api/src/outbox-relay.ts`: a separate Nest application context that transfers committed provider outbox rows to RabbitMQ.
+- `apps/api/src/payment-command-worker.ts`: a separate Nest application context consuming RabbitMQ provider commands.
 - `apps/web`: Next.js App Router inspection UI. Server Components read the API; they do not access the database directly, preserving the educational API boundary.
 - PostgreSQL: operational state, inbox/outbox, audit records, local provider-reference mirrors, ledger, and projections.
-- Redis: BullMQ queue state only. Losing Redis delays work; it cannot duplicate a committed financial operation because consumers re-check PostgreSQL.
+- RabbitMQ: provider-command delivery, competing consumers, acknowledgements, delayed retries, and dead letters; it is not the transactional source of truth.
+- Redis: BullMQ scheduled coordination only; it is not in the provider-command path.
 
 ## Module boundaries
 
@@ -45,4 +51,4 @@ flowchart LR
 
 ## Learning-branch limits
 
-This code is production-shaped but intentionally not production-ready: no live credentials, customer confirmation UI, provider settlement ingestion, secret vault, or deployment is included. See `real-psp-stripe.md`.
+This code is production-shaped but intentionally not production-ready: no live credentials, broker deployment, customer confirmation UI, provider settlement ingestion, secret vault, or deployment is included. See `outbox-rabbitmq.md` and `real-psp-stripe.md`.
