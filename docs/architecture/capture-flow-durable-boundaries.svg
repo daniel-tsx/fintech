@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1540" viewBox="0 0 1920 1540" role="img" aria-labelledby="title description">
+  <title id="title">Reliable payment capture — durable boundaries</title>
+  <desc id="description">Logical successful-capture path on merged main, not an exact deployment topology. T1 locks and validates the payment and commits CAPTURE_PENDING, an attempt, outbox event, audit and stored idempotent response together. A1 claims the outbox using SKIP LOCKED and a lease. The relay confirm-publishes to RabbitMQ, then marks the outbox PUBLISHED. The consumer calls Stripe outside any local database transaction using capture colon attemptId as the stable provider key, shown as the external T2 boundary. A2 commits provider references before broker ACK. Separately, Stripe emits a signed webhook. A3 verifies and persists it to the unique inbox before HTTP 202. A4 claims it with SKIP LOCKED and a lease. T3 locks the inbox, attempt and payment, validates evidence and atomically applies the captured state, balanced journal, audit and PROCESSED inbox status. Failed T3 rolls back; retryable errors are retried and permanent or exhausted failures become DEAD. Reconciliation flags drift in known provider references. T2 and the webhook can precede A2 completion.</desc>
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Arial, sans-serif; fill: #142C44; }
+      .eyebrow { font-size: 18px; font-weight: 600; letter-spacing: 2px; fill: #47617B; }
+      .heading { font-size: 54px; font-weight: 700; letter-spacing: -1px; }
+      .subtitle { font-size: 26px; fill: #47617B; }
+      .phase { font-size: 19px; font-weight: 700; letter-spacing: 1.5px; fill: #47617B; }
+      .card-title { font-size: 28px; font-weight: 600; }
+      .body { font-size: 23px; fill: #47617B; }
+      .detail { font-size: 20px; fill: #47617B; }
+      .edge-label { font-size: 20px; font-weight: 500; fill: #47617B; }
+      .card { fill: #FFFFFF; stroke: #C9D5E0; stroke-width: 2; }
+      .edge { fill: none; stroke: #3B5D7D; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .event { fill: none; stroke: #087C72; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .mono { font-family: Consolas, 'Courier New', monospace; font-size: 21px; fill: #142C44; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#3B5D7D" stroke-width="1.5"/></marker>
+    <marker id="event-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#087C72" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="1920" height="1540" fill="#F8FAFC"/>
+
+  <!-- Title, scope and boundary key -->
+  <text x="60" y="64" class="eyebrow">FINTECH-LAB / CAPTURE LIFECYCLE</text>
+  <text x="60" y="127" class="heading">Reliable payment capture</text>
+  <text x="60" y="175" class="subtitle">Local intent commits first. Signed provider events apply the financial result.</text>
+  <rect x="1590" y="40" width="270" height="40" rx="20" fill="#E8EEF5"/>
+  <text x="1725" y="66" text-anchor="middle" font-size="17" font-weight="600" fill="#47617B">MAIN · SUCCESS PATH</text>
+  <rect x="60" y="207" width="18" height="18" rx="4" fill="#2862C7"/>
+  <text x="89" y="223" class="detail">Local business transaction</text>
+  <rect x="405" y="207" width="18" height="18" rx="4" fill="#6B56A5"/>
+  <text x="434" y="223" class="detail">External provider boundary</text>
+  <rect x="775" y="207" width="18" height="18" rx="4" fill="#087C72"/>
+  <text x="804" y="223" class="detail">Durable webhook processing</text>
+  <text x="1860" y="223" text-anchor="end" class="detail">Shown: successful capture · at-least-once delivery</text>
+
+  <!-- Phase 1: synchronous API acceptance -->
+  <text x="60" y="266" class="phase">01 / ACCEPT INTENT</text>
+  <path d="M340 390 H390" class="edge" marker-end="url(#arrow)"/>
+  <path d="M1330 390 H1380" class="edge" marker-end="url(#arrow)"/>
+  <g id="capture-request">
+    <rect x="60" y="285" width="280" height="220" rx="18" class="card"/>
+    <text x="86" y="333" font-size="27" font-weight="600">Capture request</text>
+    <text x="86" y="376" class="body">Merchant + payment</text>
+    <text x="86" y="413" class="body">Idempotency-Key</text>
+    <text x="86" y="480" class="detail">Enter the API boundary</text>
+  </g>
+  <g id="t1-api-transaction">
+    <rect x="390" y="285" width="940" height="220" rx="18" fill="#EDF3FB" stroke="#A9BFDD" stroke-width="2"/>
+    <rect x="390" y="303" width="5" height="184" rx="2" fill="#2862C7"/>
+    <text x="420" y="333" class="card-title">T1 · API capture transaction</text>
+    <text x="420" y="376" class="body">Lock payment + validate remaining</text>
+    <text x="420" y="411" class="body">Create CAPTURE attempt</text>
+    <text x="420" y="446" class="body">Set CAPTURE_PENDING</text>
+    <text x="860" y="376" class="body">Write capture command to outbox</text>
+    <text x="860" y="411" class="body">Append audit evidence</text>
+    <text x="860" y="446" class="body">Persist idempotent 202 response</text>
+    <text x="420" y="483" class="detail" style="fill:#2862C7">One commit: business intent + delivery intent + replayable response</text>
+  </g>
+  <g id="api-idempotent-response">
+    <rect x="1380" y="285" width="480" height="220" rx="18" class="card"/>
+    <text x="1408" y="333" font-size="27" font-weight="600">202 · CAPTURE_PENDING</text>
+    <text x="1408" y="376" class="body">Scope: merchant + operation + key</text>
+    <text x="1408" y="411" class="body">Same payload → replay response</text>
+    <text x="1408" y="446" class="body">Changed payload → 422</text>
+    <text x="1408" y="483" class="detail">Acceptance precedes provider completion</text>
+  </g>
+
+  <!-- A committed outbox can be claimed even if the HTTP response is lost. -->
+  <path d="M845 505 V555 H400 V640" class="edge" marker-end="url(#arrow)"/>
+  <text x="657" y="540" text-anchor="middle" class="edge-label">Committed outbox survives API crash</text>
+
+  <!-- Phase 2: publication and provider execution -->
+  <text x="60" y="611" class="phase">02 / DELIVER THE COMMAND</text>
+  <path d="M420 765 H470" class="edge" marker-end="url(#arrow)"/>
+  <path d="M870 765 H920" class="edge" marker-end="url(#arrow)"/>
+  <path d="M1340 765 H1390" class="edge" marker-end="url(#arrow)"/>
+  <g id="a1-outbox-claim">
+    <rect x="60" y="640" width="360" height="250" rx="18" class="card"/>
+    <text x="86" y="687" class="card-title">A1 · Outbox claim</text>
+    <text x="86" y="731" font-size="22" fill="#47617B">FOR UPDATE SKIP LOCKED</text>
+    <text x="86" y="770" font-size="22" fill="#47617B">PROCESSING + 2 min lease</text>
+    <text x="86" y="809" font-size="22" fill="#47617B">Reclaim after relay crash</text>
+    <text x="86" y="860" class="detail">Claim commits before publication</text>
+  </g>
+  <g id="rabbitmq-publication-boundary">
+    <rect x="470" y="640" width="400" height="250" rx="18" fill="#FFF5E5" stroke="#DDC79C" stroke-width="2"/>
+    <text x="496" y="687" class="card-title">Relay → RabbitMQ</text>
+    <text x="496" y="731" font-size="22" fill="#47617B">Persistent broker message</text>
+    <text x="496" y="770" font-size="22" fill="#47617B">Confirm publish → PUBLISHED</text>
+    <text x="496" y="809" font-size="22" fill="#47617B">Consumer delivery + redelivery</text>
+    <text x="496" y="860" class="detail">PUBLISHED = broker accepted</text>
+  </g>
+  <g id="t2-provider-execution">
+    <rect x="920" y="640" width="420" height="250" rx="18" fill="#F0EEFB" stroke="#BEB5DD" stroke-width="2"/>
+    <rect x="920" y="658" width="5" height="214" rx="2" fill="#6B56A5"/>
+    <text x="948" y="687" class="card-title">T2 · Stripe capture</text>
+    <text x="948" y="731" font-size="22" fill="#47617B">HTTPS via PaymentProvider</text>
+    <text x="948" y="770" class="mono">Key: capture:&lt;attemptId&gt;</text>
+    <text x="948" y="809" font-size="22" fill="#47617B">Outside local DB transactions</text>
+    <text x="948" y="860" class="detail">Provider-owned execution</text>
+  </g>
+  <g id="a2-consumer-bookkeeping">
+    <rect x="1390" y="640" width="470" height="250" rx="18" class="card"/>
+    <text x="1418" y="687" font-size="26" font-weight="600">A2 · Consumer bookkeeping</text>
+    <text x="1418" y="731" class="body">Upsert local provider references</text>
+    <text x="1418" y="770" class="body">Commit PG transaction → ACK</text>
+    <text x="1418" y="809" class="body">PENDING attempt → PROCESSING</text>
+    <text x="1418" y="860" class="detail">Provider response cannot post the ledger</text>
+  </g>
+
+  <!-- The webhook branches from the provider, not from the consumer ACK. -->
+  <path d="M1130 890 V954 H480 V1040" class="event" marker-end="url(#event-arrow)"/>
+  <text x="797" y="940" text-anchor="middle" class="edge-label" style="fill:#087C72">Signed webhook · independent of the provider response / ACK</text>
+
+  <!-- Phase 3: durable receipt and atomic financial completion -->
+  <text x="60" y="1011" class="phase">03 / APPLY THE FINANCIAL RESULT</text>
+  <path d="M500 1170 H550" class="event" marker-end="url(#event-arrow)"/>
+  <path d="M880 1170 H930" class="event" marker-end="url(#event-arrow)"/>
+  <path d="M1490 1170 H1540" class="event" marker-end="url(#event-arrow)"/>
+  <g id="a3-webhook-receipt">
+    <rect x="60" y="1040" width="440" height="270" rx="18" fill="#EAF6F3" stroke="#98C9BD" stroke-width="2"/>
+    <text x="86" y="1087" class="card-title">A3 · Webhook receipt</text>
+    <text x="86" y="1131" class="body">Verify Stripe signature</text>
+    <text x="86" y="1170" class="body">Normalize + persist inbox</text>
+    <text x="86" y="1209" class="body">Unique provider + event ID</text>
+    <text x="86" y="1277" class="detail">202 after durable receipt</text>
+  </g>
+  <g id="a4-webhook-claim">
+    <rect x="550" y="1040" width="330" height="270" rx="18" fill="#EAF6F3" stroke="#98C9BD" stroke-width="2"/>
+    <text x="576" y="1087" font-size="27" font-weight="600">A4 · Inbox claim</text>
+    <text x="576" y="1131" font-size="22" fill="#47617B">SKIP LOCKED + lease</text>
+    <text x="576" y="1170" font-size="22" fill="#47617B">PROCESSING / retry</text>
+    <text x="576" y="1209" font-size="22" fill="#47617B">Scheduled BullMQ worker</text>
+    <text x="576" y="1277" class="detail">PG owns durable state</text>
+  </g>
+  <g id="t3-webhook-business-transaction">
+    <rect x="930" y="1040" width="560" height="270" rx="18" fill="#EDF3FB" stroke="#A9BFDD" stroke-width="2"/>
+    <rect x="930" y="1058" width="5" height="234" rx="2" fill="#2862C7"/>
+    <text x="958" y="1087" font-size="26" font-weight="600">T3 · Webhook business transaction</text>
+    <text x="958" y="1131" class="body">Lock inbox, attempt + payment</text>
+    <text x="958" y="1170" class="body">Validate identity, amount + currency</text>
+    <text x="958" y="1209" class="body">Apply result + balanced journal + audit</text>
+    <text x="958" y="1248" font-size="22" fill="#47617B">Duplicate success → no business effect</text>
+    <text x="958" y="1284" class="detail" style="fill:#2862C7">Mark inbox PROCESSED in the same commit</text>
+  </g>
+  <g id="financial-result">
+    <rect x="1540" y="1040" width="320" height="270" rx="18" fill="#EAF6F3" stroke="#98C9BD" stroke-width="2"/>
+    <text x="1566" y="1087" font-size="30" font-weight="700">CAPTURED</text>
+    <text x="1566" y="1131" class="body">Balanced ledger</text>
+    <text x="1566" y="1170" class="body">Merchant pending</text>
+    <text x="1566" y="1209" class="body">One capture journal</text>
+    <text x="1566" y="1277" class="detail">Captured precedes settlement</text>
+  </g>
+
+  <!-- Failure gaps: concise reasons for the boundaries, not exactly-once claims. -->
+  <path d="M60 1350 H1860" stroke="#D7E0E8" stroke-width="2"/>
+  <text x="60" y="1393" font-size="24" font-weight="600">Publication gap</text>
+  <text x="60" y="1429" class="body">Outbox survives the API / relay crash.</text>
+  <text x="60" y="1463" class="body">Republish with the same outbox ID.</text>
+  <text x="670" y="1393" font-size="24" font-weight="600">Provider response / ACK gap</text>
+  <text x="670" y="1429" class="body">Redelivery reuses the provider key.</text>
+  <text x="670" y="1463" class="body">Delayed retries → dead-letter queue.</text>
+  <text x="1280" y="1393" font-size="24" font-weight="600">Webhook / business commit gap</text>
+  <text x="1280" y="1429" class="body">Failed T3 rolls back state + journal.</text>
+  <text x="1280" y="1463" font-size="22" fill="#47617B">Inbox retry / DEAD; reconciliation flags drift.</text>
+  <text x="60" y="1515" font-size="17" fill="#627589">Eastbase Studio · fintech-lab · Production-oriented learning implementation; not deployed</text>
+  <text x="1860" y="1515" text-anchor="end" font-size="17" fill="#627589">T2 is an external boundary. There is no cross-system transaction.</text>
+</svg>

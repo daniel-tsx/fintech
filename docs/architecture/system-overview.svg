@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1200" viewBox="0 0 1920 1200" role="img" aria-labelledby="title description">
+  <title id="title">Fintech payment platform — system overview</title>
+  <desc id="description">The Next.js inspection dashboard and merchant clients use a NestJS API. PostgreSQL stores payment state, the ledger, transactional outbox, webhook inbox, audit, idempotency and provider references. A relay publishes committed commands to RabbitMQ; a command consumer calls Stripe with stable idempotency keys. Signed Stripe webhooks return through the API receiver into the inbox. A separate BullMQ worker uses Redis for scheduling, processes the inbox and runs internal settlement, payout and reconciliation work. Reconciliation reads Stripe status. This logical view represents merged main; it is not an exact deployment topology. PostgreSQL owns durable financial correctness. Internal settlement moves pending to available before internal payout; external transfers are not implemented.</desc>
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Arial, sans-serif; fill: #142C44; }
+      .eyebrow { font-size: 18px; font-weight: 600; letter-spacing: 2px; fill: #47617B; }
+      .heading { font-size: 54px; font-weight: 700; letter-spacing: -1px; }
+      .subtitle { font-size: 26px; fill: #47617B; }
+      .node-title { font-size: 28px; font-weight: 600; }
+      .body { font-size: 22px; fill: #47617B; }
+      .small { font-size: 19px; fill: #47617B; }
+      .edge-label { font-size: 18px; font-weight: 500; fill: #47617B; }
+      .store-title { font-size: 24px; font-weight: 600; }
+      .footer-title { font-size: 22px; font-weight: 600; }
+      .node { fill: #FFFFFF; stroke: #C9D5E0; stroke-width: 2; }
+      .edge { fill: none; stroke: #3B5D7D; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .event { fill: none; stroke: #087C72; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+      .schedule { fill: none; stroke: #627589; stroke-width: 2.5; stroke-dasharray: 8 7; stroke-linejoin: round; stroke-linecap: round; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#3B5D7D" stroke-width="1.5"/></marker>
+    <marker id="event-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#087C72" stroke-width="1.5"/></marker>
+    <marker id="schedule-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#627589" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="1920" height="1200" fill="#F8FAFC"/>
+
+  <!-- Title and provenance -->
+  <text x="60" y="64" class="eyebrow">FINTECH-LAB / SYSTEM ARCHITECTURE</text>
+  <text x="60" y="127" class="heading">Durable payments. Clear boundaries.</text>
+  <text x="60" y="175" class="subtitle">API acceptance, provider execution and financial completion are separate steps.</text>
+  <rect x="1590" y="40" width="270" height="40" rx="20" fill="#E8EEF5"/>
+  <text x="1725" y="66" text-anchor="middle" font-size="17" font-weight="600" fill="#47617B">MAIN · LOGICAL VIEW</text>
+
+  <!-- Request / response and durable command delivery -->
+  <path d="M340 290 H420" class="edge" marker-end="url(#arrow)"/>
+  <path d="M420 345 H340" class="edge" marker-end="url(#arrow)"/>
+  <text x="380" y="276" text-anchor="middle" class="edge-label">request</text>
+  <text x="380" y="376" text-anchor="middle" class="edge-label">response</text>
+  <path d="M850 315 H940" class="edge" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="895" y="302" text-anchor="middle" font-size="16" fill="#47617B">read / write</text>
+  <path d="M940 485 H900 V507 H850" class="edge" marker-end="url(#arrow)"/>
+  <text x="890" y="466" text-anchor="middle" class="edge-label">claim</text>
+  <path d="M640 562 V650" class="edge" marker-end="url(#arrow)"/>
+  <text x="663" y="607" class="edge-label">publish + confirm</text>
+  <path d="M640 760 V850" class="edge" marker-end="url(#arrow)"/>
+  <text x="663" y="805" class="edge-label">deliver / ACK</text>
+  <path d="M850 915 H900 V870 H1715 V810" class="edge" marker-end="url(#arrow)"/>
+  <rect x="983" y="846" width="369" height="42" rx="10" fill="#F8FAFC"/>
+  <text x="1167" y="874" text-anchor="middle" class="edge-label">HTTPS · stable provider idempotency key</text>
+  <path d="M850 945 H920 V744 H940" fill="none" stroke="#F8FAFC" stroke-width="12"/>
+  <path d="M850 945 H920 V744 H940" class="edge" marker-end="url(#arrow)"/>
+  <text x="936" y="972" class="edge-label">references</text>
+
+  <!-- Independent webhook path -->
+  <path d="M1715 660 V415" class="event" marker-end="url(#event-arrow)"/>
+  <text x="1735" y="537" class="edge-label" style="fill:#087C72">signed events</text>
+  <text x="1735" y="564" class="edge-label" style="fill:#087C72">via HTTPS</text>
+  <path d="M1570 337 H1527 V572 H1490" class="event" marker-end="url(#event-arrow)"/>
+  <text x="1540" y="445" class="edge-label" style="fill:#087C72">inbox</text>
+
+  <!-- Worker/database crossing uses a halo: crossing is not a junction. -->
+  <path d="M1410 800 V930" fill="none" stroke="#F8FAFC" stroke-width="15"/>
+  <path d="M1410 800 V930" class="event" marker-start="url(#event-arrow)" marker-end="url(#event-arrow)"/>
+  <rect x="1210" y="880" width="268" height="34" rx="8" fill="#F8FAFC"/>
+  <text x="1344" y="904" text-anchor="middle" class="edge-label" style="fill:#087C72">claim inbox / apply result</text>
+  <path d="M1570 995 H1490" class="schedule" marker-end="url(#schedule-arrow)"/>
+  <path d="M1490 1040 H1527 V775 H1570" fill="none" stroke="#F8FAFC" stroke-width="12"/>
+  <path d="M1490 1040 H1527 V775 H1570" class="schedule" marker-end="url(#schedule-arrow)"/>
+  <text x="1551" y="908" class="edge-label">provider status reads</text>
+
+  <!-- Client and API -->
+  <g id="client">
+    <rect x="60" y="240" width="280" height="150" rx="18" class="node"/>
+    <text x="86" y="281" class="node-title">Client / operator</text>
+    <text x="86" y="321" class="body">Next.js dashboard</text>
+    <text x="86" y="351" class="body">Merchant API clients</text>
+  </g>
+  <g id="api-service">
+    <rect x="420" y="240" width="430" height="150" rx="18" class="node"/>
+    <rect x="420" y="258" width="5" height="114" rx="2" fill="#2862C7"/>
+    <text x="448" y="281" class="node-title">NestJS API service</text>
+    <text x="448" y="321" class="body">Merchant scope + command validation</text>
+    <text x="448" y="351" class="body">Intent acceptance + trace reads</text>
+  </g>
+
+  <!-- Durable store: all nested boxes are PostgreSQL tables, not services. -->
+  <g id="postgresql">
+    <rect x="940" y="230" width="550" height="570" rx="22" fill="#EDF3FB" stroke="#B2C6DF" stroke-width="2"/>
+    <text x="970" y="275" font-size="32" font-weight="700">PostgreSQL</text>
+    <text x="970" y="309" class="body">Durable correctness authority</text>
+    <g id="payments-and-ledger">
+      <rect x="970" y="345" width="490" height="85" rx="12" fill="#FFFFFF"/>
+      <text x="992" y="380" class="store-title">Payments + double-entry ledger</text>
+      <text x="992" y="410" class="small">Workflow state + immutable journals</text>
+    </g>
+    <g id="transactional-outbox">
+      <rect x="970" y="452" width="490" height="65" rx="12" fill="#FFFFFF"/>
+      <text x="992" y="493" class="store-title">Transactional outbox</text>
+    </g>
+    <g id="webhook-inbox">
+      <rect x="970" y="540" width="490" height="65" rx="12" fill="#E3F2EF"/>
+      <text x="992" y="581" class="store-title">Webhook inbox</text>
+    </g>
+    <g id="audit-and-idempotency">
+      <rect x="970" y="628" width="490" height="70" rx="12" fill="#FFFFFF"/>
+      <text x="992" y="672" class="store-title">Audit + API idempotency</text>
+    </g>
+    <g id="provider-reference-mirror">
+      <rect x="970" y="719" width="490" height="52" rx="12" fill="#FFFFFF"/>
+      <text x="992" y="753" class="body">Provider reference mirror</text>
+    </g>
+  </g>
+
+  <!-- Independently runnable relay and command consumer -->
+  <g id="outbox-relay">
+    <rect x="430" y="452" width="420" height="110" rx="18" class="node"/>
+    <text x="458" y="495" class="node-title">Outbox relay</text>
+    <text x="458" y="531" class="body">Claim lease → confirmed publication</text>
+  </g>
+  <g id="rabbitmq">
+    <rect x="430" y="650" width="420" height="110" rx="18" fill="#FFF5E5" stroke="#DDC79C" stroke-width="2"/>
+    <text x="458" y="693" class="node-title">RabbitMQ command queue</text>
+    <text x="458" y="729" class="body">Delivery · delayed retry · dead letters</text>
+  </g>
+  <g id="payment-command-consumer">
+    <rect x="430" y="850" width="420" height="130" rx="18" class="node"/>
+    <text x="458" y="893" class="node-title">Payment command consumer</text>
+    <text x="458" y="929" class="body">PaymentProvider → Stripe adapter</text>
+    <text x="458" y="959" class="small">ACK after local reference commit</text>
+  </g>
+
+  <!-- Webhook ingress is a component of the HTTP API, not a new service. -->
+  <g id="webhook-receiver">
+    <rect x="1570" y="260" width="290" height="155" rx="18" fill="#EAF6F3" stroke="#98C9BD" stroke-width="2"/>
+    <text x="1594" y="303" font-size="26" font-weight="600">Webhook receiver</text>
+    <text x="1594" y="338" class="body">Verify → store → 202</text>
+    <text x="1594" y="375" class="small">Inside the NestJS API</text>
+  </g>
+  <g id="stripe-provider">
+    <rect x="1570" y="660" width="290" height="150" rx="18" fill="#F0EEFB" stroke="#BEB5DD" stroke-width="2"/>
+    <text x="1594" y="704" font-size="30" font-weight="700">Stripe / PSP</text>
+    <text x="1594" y="743" class="body">Provider-owned state</text>
+    <text x="1594" y="779" class="small">External HTTPS API</text>
+  </g>
+
+  <!-- Redis only schedules coordination; PostgreSQL owns financial effects. -->
+  <g id="scheduled-worker">
+    <rect x="1060" y="930" width="430" height="140" rx="18" fill="#EAF6F3" stroke="#98C9BD" stroke-width="2"/>
+    <text x="1086" y="971" class="node-title">Scheduled worker</text>
+    <text x="1086" y="1007" font-size="21" fill="#47617B">Webhooks · settlement · reconciliation</text>
+    <text x="1086" y="1040" class="small">Internal settlement → available → payout</text>
+  </g>
+  <g id="redis-and-bullmq">
+    <rect x="1570" y="940" width="290" height="115" rx="18" class="node"/>
+    <text x="1594" y="984" font-size="27" font-weight="600">Redis / BullMQ</text>
+    <text x="1594" y="1022" class="body">Scheduling only</text>
+  </g>
+
+  <!-- Readable portfolio takeaway and honest project status -->
+  <path d="M60 1100 H1860" stroke="#D7E0E8" stroke-width="2"/>
+  <text x="60" y="1136" class="footer-title">Atomic intent + outbox</text>
+  <text x="560" y="1136" class="footer-title">Provider calls stay outside DB transactions</text>
+  <text x="1245" y="1136" class="footer-title">Webhooks apply payment + ledger</text>
+  <text x="60" y="1175" font-size="17" fill="#627589">Eastbase Studio · fintech-lab · Production-oriented learning implementation; not deployed</text>
+  <path d="M1415 1170 H1455" class="edge"/>
+  <text x="1467" y="1176" font-size="16" fill="#47617B">Commands</text>
+  <path d="M1570 1170 H1610" class="event"/>
+  <text x="1622" y="1176" font-size="16" fill="#47617B">Results</text>
+  <path d="M1712 1170 H1752" class="schedule"/>
+  <text x="1764" y="1176" font-size="16" fill="#47617B">Coordination</text>
+</svg>

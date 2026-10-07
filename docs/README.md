@@ -18,6 +18,7 @@ Start with the [project overview](../README.md). Each document below owns its na
 | [Database design](database-design.md) | Schema, checked-in SQL constraints and triggers |
 | [Ledger](ledger.md) | Accounts, capture postings, rounding and immutable accounting |
 | [Concurrency](concurrency.md) | Locks/uniqueness, executed race coverage and gaps |
+| [Portfolio architecture diagrams](architecture/portfolio-diagrams-notes.md) | Supporting visuals for Architecture, editable sources, exports and review limits |
 
 ## Payment flows
 
