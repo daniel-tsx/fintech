@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No browser unit tests configured; UI is verified with build and browser smoke tests.\""
+    "test": "echo \"No automated browser tests configured. See docs/verification.md for manual smoke checks.\""
   },
   "dependencies": {
     "next": "^15.5.2",

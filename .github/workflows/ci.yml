@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Node ${{ matrix.node }} checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    env:
+      RUN_DB_TESTS: '0'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
+          run_install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      # next-env.d.ts references generated route types on a fresh checkout.
+      - run: pnpm build
+      - run: pnpm typecheck
+
+  integration:
+    name: PostgreSQL financial integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fintech
+          POSTGRES_PASSWORD: fintech
+          POSTGRES_DB: fintech_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fintech -d fintech_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://fintech:fintech@localhost:5432/fintech_ci
+      RUN_DB_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
+          run_install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      # Services are constructed directly: no Redis, RabbitMQ, seed or Stripe calls.
+      - run: pnpm --filter @fintech-lab/api test:integration

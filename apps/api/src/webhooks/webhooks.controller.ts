@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, Post, RawBodyRequest, Req } from '@nestjs/common';
+import { Controller, Get, Headers, HttpCode, Post, RawBodyRequest, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { CurrentActor, Public } from '../auth/auth.decorators';
 import type { AuthActor } from '../auth/auth.types';
@@ -11,10 +11,11 @@ export class WebhooksController {
   constructor(private readonly receiver: WebhookReceiverService, private readonly database: DatabaseService) {}
 
   @Public()
-  @Post('mock-psp')
-  receive(@Req() request: RawBodyRequest<Request>, @Headers('x-mock-psp-signature') signature = '') {
+  @Post('stripe')
+  @HttpCode(202)
+  receive(@Req() request: RawBodyRequest<Request>, @Headers('stripe-signature') signature = '') {
     if (!request.rawBody) throw new DomainError('RAW_BODY_REQUIRED', 'Raw webhook body was not captured', 500);
-    return this.receiver.receive(request.rawBody.toString('utf8'), signature, request.headers);
+    return this.receiver.receive(request.rawBody, signature, request.headers);
   }
 
   @Get()

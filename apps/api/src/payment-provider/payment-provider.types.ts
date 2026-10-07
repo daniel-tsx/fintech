@@ -1,9 +1,8 @@
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
+export const STRIPE_CLIENT = Symbol('STRIPE_CLIENT');
 
-export type ProviderScenario =
-  | 'SUCCESS' | 'DECLINE' | 'TIMEOUT_BEFORE_PROCESSING' | 'PROCESSED_RESPONSE_LOST'
-  | 'DELAYED_WEBHOOK' | 'DUPLICATE_WEBHOOK' | 'OUT_OF_ORDER_WEBHOOK' | 'TEMPORARY_500'
-  | 'REFUND_RETRY_THEN_SUCCESS' | 'AMOUNT_MISMATCH' | 'UNEXPECTED_TRANSACTION';
+export type ProviderOperation = 'AUTHORIZE' | 'CAPTURE' | 'VOID' | 'REFUND';
+export type ProviderObjectType = 'PAYMENT_INTENT' | 'REFUND';
 
 export interface ProviderOperationInput {
   merchantId: string;
@@ -13,22 +12,38 @@ export interface ProviderOperationInput {
   amount: number;
   currency: string;
   paymentMethodToken?: string;
+  providerPaymentId?: string;
+  finalCapture?: boolean;
   idempotencyKey: string;
-  scenario: ProviderScenario;
-  attemptNumber: number;
 }
 
-export interface ProviderResult { providerTransactionId: string; status: string }
-export interface ProviderReportRow extends ProviderResult { paymentId: string | null; operation: string; amount: number; currency: string; merchantId: string }
+export interface ProviderResult {
+  providerObjectId: string;
+  paymentIntentId?: string;
+  chargeId?: string;
+  status: string;
+  metadata: Record<string, string | number | boolean | null>;
+}
+
+export interface ProviderStatusQuery {
+  objectType: ProviderObjectType;
+  providerObjectId: string;
+}
+
+export interface ProviderStatus extends ProviderResult {
+  amount: number;
+  capturedAmount?: number;
+  currency: string;
+}
 
 export interface PaymentProvider {
   authorize(input: ProviderOperationInput): Promise<ProviderResult>;
   capture(input: ProviderOperationInput): Promise<ProviderResult>;
   cancel(input: ProviderOperationInput): Promise<ProviderResult>;
   refund(input: ProviderOperationInput): Promise<ProviderResult>;
-  fetchTransactionStatus(providerTransactionId: string): Promise<ProviderResult | null>;
-  report(): Promise<ProviderReportRow[]>;
+  fetchStatus(query: ProviderStatusQuery): Promise<ProviderStatus | null>;
 }
 
 export class RetryableProviderError extends Error {}
 export class UnknownProviderOutcomeError extends Error {}
+export class PermanentProviderError extends Error {}

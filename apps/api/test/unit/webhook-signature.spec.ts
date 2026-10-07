@@ -1,16 +1,23 @@
 import { ConfigService } from '@nestjs/config';
-import { WebhookReceiverService } from '../../src/webhooks/webhook-receiver.service';
+import Stripe from 'stripe';
 import type { DatabaseService } from '../../src/database/database.service';
+import { WebhookReceiverService } from '../../src/webhooks/webhook-receiver.service';
 
-describe('WebhookReceiverService signatures', () => {
-  const receiver = new WebhookReceiverService(new ConfigService({ WEBHOOK_SECRET: 'test-secret' }), {} as DatabaseService);
+describe('WebhookReceiverService Stripe signatures', () => {
+  const secret = 'whsec_test_secret';
+  const stripe = new Stripe('sk_test_placeholder');
+  const sql = jest.fn();
+  const database = { sql } as unknown as DatabaseService;
+  const receiver = new WebhookReceiverService(new ConfigService({ STRIPE_WEBHOOK_SECRET: secret }), database, stripe);
 
-  it('generates deterministic HMAC signatures', () => {
-    expect(receiver.sign('{"id":"evt_1"}')).toBe(receiver.sign('{"id":"evt_1"}'));
-    expect(receiver.sign('{"id":"evt_1"}')).not.toBe(receiver.sign('{"id":"evt_2"}'));
-  });
+  beforeEach(() => sql.mockClear());
 
-  it('rejects a bad signature before touching storage', async () => {
-    await expect(receiver.receive('{"id":"evt_1"}', 'bad')).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_SIGNATURE' });
+  it('rejects a signature for a different raw body before touching storage', async () => {
+    const signed = JSON.stringify({ id: 'evt_1', object: 'event' });
+    const tampered = Buffer.from(JSON.stringify({ id: 'evt_2', object: 'event' }));
+    const signature = stripe.webhooks.generateTestHeaderString({ payload: signed, secret });
+
+    await expect(receiver.receive(tampered, signature)).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_SIGNATURE' });
+    expect(sql).not.toHaveBeenCalled();
   });
 });

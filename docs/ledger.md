@@ -29,4 +29,4 @@ Settlement posts two balanced legs in one journal: debit cash/credit PSP clearin
 
 Refund fee allocation uses cumulative proportional allocation. The fee attributed to refund `n` is `floor(totalFee * cumulativeRefund / captured) - alreadyRefundedFee`, so the last refund absorbs rounding and cumulative allocations remain exact.
 
-Corrections use a reversal journal whose `reversal_of_id` references the original transaction. Database triggers make posted journals and entries immutable.
+Corrections require new compensating journals; database triggers make posted journals and entries immutable. The schema includes `reversal_of_id` and a foreign key, but no general reversal command/API is implemented. Refund and dispute workflows post their own compensating business journals.

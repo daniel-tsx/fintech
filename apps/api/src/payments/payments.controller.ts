@@ -3,7 +3,7 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentActor } from '../auth/auth.decorators';
 import type { AuthActor } from '../auth/auth.types';
-import { CapturePaymentDto, CreatePaymentDto, ProviderCommandDto } from './dto/create-payment.dto';
+import { CapturePaymentDto, CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
@@ -20,8 +20,8 @@ export class PaymentsController {
   }
 
   @Post(':id/authorize')
-  async authorize(@CurrentActor() actor: AuthActor, @Param('id', ParseUUIDPipe) id: string, @Headers('idempotency-key') key: string, @Body() dto: ProviderCommandDto, @Res({ passthrough: true }) response: Response) {
-    const result = await this.payments.authorize(actor, id, key, dto.scenario);
+  async authorize(@CurrentActor() actor: AuthActor, @Param('id', ParseUUIDPipe) id: string, @Headers('idempotency-key') key: string, @Res({ passthrough: true }) response: Response) {
+    const result = await this.payments.authorize(actor, id, key);
     response.status(result.status).setHeader('idempotency-replayed', String(result.replayed));
     return result.value;
   }
@@ -34,8 +34,8 @@ export class PaymentsController {
   }
 
   @Post(':id/cancel')
-  async cancel(@CurrentActor() actor: AuthActor, @Param('id', ParseUUIDPipe) id: string, @Headers('idempotency-key') key: string, @Body() dto: ProviderCommandDto, @Res({ passthrough: true }) response: Response) {
-    const result = await this.payments.cancel(actor,id,key,dto.scenario); response.status(result.status).setHeader('idempotency-replayed',String(result.replayed)); return result.value;
+  async cancel(@CurrentActor() actor: AuthActor, @Param('id', ParseUUIDPipe) id: string, @Headers('idempotency-key') key: string, @Res({ passthrough: true }) response: Response) {
+    const result = await this.payments.cancel(actor,id,key); response.status(result.status).setHeader('idempotency-replayed',String(result.replayed)); return result.value;
   }
 
   @Get()

@@ -29,8 +29,13 @@ export class RefundsService {
       const remaining = Number(payment.captured_amount) - Number(reserved.total);
       if (dto.amount > remaining) throw new DomainError('REFUND_EXCEEDS_CAPTURED_AMOUNT', 'Refund would exceed the unrefunded captured amount', 422, { remaining });
       const refundId = randomUUID();
+      const [capture] = await tx<{ provider_transaction_id: string }[]>`
+        select provider_transaction_id from payment_attempts
+        where payment_id=${paymentId} and kind='CAPTURE' and status='SUCCEEDED' and provider_transaction_id is not null
+        order by created_at desc limit 1`;
+      if (!capture) throw new DomainError('PROVIDER_REFERENCE_MISSING', 'The captured payment has no Stripe PaymentIntent reference', 409);
       await tx`insert into refunds (id, merchant_id, payment_id, amount, currency, reason) values (${refundId}, ${merchantId}, ${paymentId}, ${dto.amount}, ${payment.currency}, ${dto.reason ?? null})`;
-      await this.outbox.add(tx, { aggregateType: 'REFUND', aggregateId: refundId, eventType: 'provider.refund.requested', payload: { merchantId, paymentId, refundId, amount: dto.amount, currency: payment.currency, scenario: dto.scenario, idempotencyKey: `refund:${refundId}` } });
+      await this.outbox.add(tx, { aggregateType: 'REFUND', aggregateId: refundId, eventType: 'provider.refund.requested', payload: { merchantId, paymentId, refundId, amount: dto.amount, currency: payment.currency, providerPaymentId: capture.provider_transaction_id, idempotencyKey: `refund:${refundId}` } });
       await this.audit.append(tx, { merchantId, actor, action: 'refund.requested', targetType: 'payment', targetId: paymentId, metadata: { refundId, amount: dto.amount } });
       return { id: refundId, paymentId, status: 'PENDING', amount: dto.amount, currency: payment.currency };
     }});

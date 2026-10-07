@@ -8,5 +8,5 @@ const groups = [
 ];
 
 export function Sidebar() {
-  return <aside className="sidebar"><Link href="/" className="brand-link"><Wordmark /></Link><nav>{groups.map((group) => <div className="nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</div>)}</nav><footer><span><i className="live-dot" aria-hidden /> Local rail</span><small>Mock PSP · no real money</small></footer></aside>;
+  return <aside className="sidebar"><Link href="/" className="brand-link"><Wordmark /></Link><nav>{groups.map((group) => <div className="nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</div>)}</nav><footer><span><i className="live-dot" aria-hidden /> External PSP lab</span><small>Stripe-shaped · no real money</small></footer></aside>;
 }
