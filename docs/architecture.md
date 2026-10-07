@@ -45,10 +45,10 @@ flowchart LR
 
 1. Provider calls never mutate the ledger directly. A signed provider event is persisted, then processed idempotently.
 2. A synchronous API response acknowledges accepted local intent, not final provider outcome.
-3. Provider `processed-but-response-lost` is an unknown outcome and must be resolved by webhook or reconciliation, never blind retry.
+3. A lost provider response is an unknown outcome. Consumers retry the original provider key; a webhook can independently complete capture. Reconciliation detects drift for known references but does not repair financial state.
 4. Financial postings are double-entry, immutable, currency-isolated, and connected to an idempotent business reference.
 5. Stripe owns provider execution and is accessed only through the `PaymentProvider` interface. Local provider rows are references/caches, never provider truth.
 
 ## Learning-branch limits
 
-This code is production-shaped but intentionally not production-ready: no live credentials, broker deployment, customer confirmation UI, provider settlement ingestion, secret vault, or deployment is included. See `outbox-rabbitmq.md` and `real-psp-stripe.md`.
+This is a local reference implementation. Provider and broker network behavior is mocked in automated tests; internal settlement and payout do not move external funds. Customer confirmation UI, provider settlement ingestion, managed secrets and deployment are outside scope. See [outbox delivery](outbox-rabbitmq.md), [Stripe boundary](real-psp-stripe.md) and [verification](verification.md).

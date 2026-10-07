@@ -1,10 +1,10 @@
-# Real PSP learning branch: Stripe
+# Stripe provider boundary
 
-Status: learning branch (`real-psp-stripe`). Not deployed. No live calls are used by automated tests.
+Status: current for provider mapping and ownership. The polling-worker comparison describes parent commit `286c8c3` (`real-psp-stripe`); current outbound delivery uses [RabbitMQ relay/consumers](outbox-rabbitmq.md). Not deployed; no live calls are used by automated tests.
 
 This branch keeps the modular monolith, transactional outbox, durable webhook inbox, internal ledger, settlements, payouts, refunds, and reconciliation. It changes one boundary: provider execution belongs to an external Stripe account rather than an in-process simulator.
 
-## Current Mock architecture
+## Historical Mock architecture
 
 On the original branch, `MockPspProvider` is both adapter and provider simulator. It chooses outcomes from `ProviderScenario`, creates fake provider IDs, writes an authoritative-looking `provider_transactions` row, creates a fake provider webhook in our outbox, and lets the worker call `WebhookReceiverService` directly. `report()` reads that same local provider database for reconciliation.
 
@@ -202,7 +202,7 @@ Running the API/worker with placeholders is suitable for reading, builds, and te
    - Why: this is the anti-corruption layer between internal terminology and Stripe's model.
    - Moved outside: execution, ID generation, state transitions, and provider idempotency storage.
 
-3. `apps/api/src/payments/payments.service.ts`, `apps/api/src/refunds/refunds.service.ts`, and `apps/api/src/outbox/outbox-dispatcher.service.ts`
+3. `apps/api/src/payments/payments.service.ts`, `apps/api/src/refunds/refunds.service.ts`, and the historical outbox dispatcher (removed on the RabbitMQ branch; now `apps/api/src/payment-commands/payment-command-handler.service.ts`)
    - Changed: scenario flags disappeared; commands carry the known PaymentIntent reference; the worker writes a mirror after SDK responses.
    - Why: reliable internal intent/outbox behavior remains, while remote work happens after commit.
    - Moved outside: simulated synchronous outcomes and local webhook generation.

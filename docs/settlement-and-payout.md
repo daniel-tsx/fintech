@@ -6,10 +6,10 @@ Status: current.
 flowchart LR
   C[Captured] --> MP[Merchant pending]
   MP -->|T+N eligible| S[Settlement batch]
-  S -->|provider settlement confirmed| MA[Merchant available]
+  S -->|local completion journal| MA[Merchant available]
   MA -->|atomic reservation| PR[Payout requested]
   PR --> PC[Payout clearing]
-  PC -->|provider confirms| PAID[Paid out]
+  PC -->|internal payout completion| PAID[Lab payout succeeded]
 ```
 
 The settlement generator selects captured, unsettled payment captures older than the merchant's configured delay. It creates a settlement and unique items in one transaction. Completion posts cash/clearing and pending/available movements using one ledger business reference. Retry finds the existing settlement journal.
