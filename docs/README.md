@@ -45,6 +45,11 @@ Start with the [project overview](../README.md). Each document below owns its na
 - [UI signature](ui-signature.md) — dashboard visual conventions.
 - [Dashboard screenshot](assets/README.md) — seeded fixture provenance and reproduction.
 
+## Audit evidence
+
+- [H1 financial correctness audit](audits/h1-financial-correctness.md) — historical findings for the audited revision, with follow-up links.
+- [H1 Fix 01: posted ledger immutability](audits/h1-fix-01-posted-ledger-immutability.md) — F02 implementation, migration considerations and regression evidence. Current accounting/database behavior remains owned by Ledger and Database design above.
+
 ## Historical material
 
 - [Original Mock PSP failure scenarios](archive/failure-scenarios.md) — historical; runtime scenario controls were removed before this checkout.

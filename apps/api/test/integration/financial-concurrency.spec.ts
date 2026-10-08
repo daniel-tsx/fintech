@@ -34,8 +34,9 @@ describeDatabase('PostgreSQL financial concurrency', () => {
       const businessId = randomUUID();
       await tx`insert into ledger_accounts (merchant_id,code,account_type,currency,name) values (${merchantId},'MERCHANT_AVAILABLE','LIABILITY','USD','Available') on conflict do nothing`;
       const [account] = await tx<{id:string}[]>`select id from ledger_accounts where merchant_id=${merchantId} and code='MERCHANT_AVAILABLE' and currency='USD'`;
-      const [journal] = await tx<{id:string}[]>`insert into ledger_transactions (merchant_id,business_type,business_id,currency,description,status,posted_at) values (${merchantId},'TEST_UNBALANCED',${businessId},'USD','Must fail','POSTED',now()) returning id`;
+      const [journal] = await tx<{id:string}[]>`insert into ledger_transactions (merchant_id,business_type,business_id,currency,description) values (${merchantId},'TEST_UNBALANCED',${businessId},'USD','Must fail') returning id`;
       await tx`insert into ledger_entries (transaction_id,account_id,currency,debit,credit) values (${journal.id},${account.id},'USD',0,100)`;
+      await tx`update ledger_transactions set status='POSTED',posted_at=now() where id=${journal.id}`;
     })).rejects.toThrow(/not balanced/i);
   });
 

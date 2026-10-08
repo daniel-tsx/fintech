@@ -80,7 +80,7 @@ Build precedes standalone typecheck on a fresh checkout because the tracked Next
 | `pnpm test` | API unit suite; database suite skipped unless opted in | Browser behavior or database invariants |
 | `test:unit` | State transitions, journal validation/rounding, Stripe mapping/signature/normalization, capture handler, relay, ACK/retry/key reuse, reconciliation mocks | Real locks, broker deliveries or provider API behavior |
 | Build | Nest compilation and Next production build | Running workers, successful API requests or a browser journey |
-| PostgreSQL integration | Five scenarios listed below using checked-in migrations | Every financial race or full lifecycle |
+| PostgreSQL integration | Five financial concurrency scenarios plus 17 F02 sealing/function-context regressions using checked-in migrations | Every financial race or full lifecycle |
 | Seeded HTTP/browser smoke | Local API/UI render fixture evidence | Actual authorization/capture at a PSP |
 
 The web `test` script prints a notice; no automated browser test suite is configured.
@@ -118,6 +118,14 @@ Remove-Item Env:RUN_DB_TESTS
 5. Signed Stripe test-event processing completes capture and posts one journal.
 
 Stripe signatures are generated and verified locally with the SDK. No Stripe call is made.
+
+The [F02 ledger suite](../apps/api/test/integration/posted-ledger-immutability.spec.ts) adds 17 regressions covering posted inserts, entry/header mutation, TRUNCATE, concurrent posting, stale repeatable-read snapshots, valid DRAFT construction, duplicate service posting, deferred rejection and separate correction journals. Two cases also verify balanced posting and unbalanced rejection with `public` excluded from the session search path. Run it explicitly with:
+
+```bash
+RUN_DB_TESTS=1 pnpm --filter @fintech-lab/api test:integration --runTestsByPath test/integration/posted-ledger-immutability.spec.ts
+```
+
+The same Windows environment setup above applies. This suite uses only the disposable PostgreSQL database.
 
 ## Offline demo commands
 
@@ -180,11 +188,17 @@ Additional local verification:
 - All 26 Markdown files were checked: 139 relative links/anchors resolved. All 12 Mermaid blocks parsed with Mermaid 11 in the browser. CI YAML parsed with installed `js-yaml` and its triggers, matrix, commands and PostgreSQL service configuration were checked structurally; hosted workflow execution remains unverified.
 - `git diff --check` passed. Targeted credential-pattern scanning found no live Stripe keys, private-key blocks or common GitHub/AWS access-key patterns in the changed documentation/configuration. Demo values remain explicitly labeled; this is not a repository-history secret audit.
 
+### F02 verification follow-up
+
+On 2026-10-07, [H1 Fix 01](audits/h1-fix-01-posted-ledger-immutability.md) added and verified PostgreSQL journal sealing. Lint, typecheck, 34 unit tests and API/web builds passed. The full integration suite passed 20 tests on a fresh unseeded PostgreSQL 18.6 database; all 15 F02 tests also passed explicitly on an upgraded database with a balanced existing journal. The migration refused intentionally corrupted posted history. Seed/reseed and catalog checks passed. These are local results; hosted CI/PostgreSQL 17 remain unexecuted.
+
+On 2026-10-08, defensive function-context review added forward migration 0003 and two ordinary functional cases. Both new cases failed before hardening because the unqualified `ledger_status` type depended on the session search path. After migration, the fresh unseeded PostgreSQL 18.6 database passed all 22 integration tests; the upgraded database passed all 17 F02 cases. Fresh install, valid upgrade and refusal of retained invalid history were checked, including unchanged historical rows, function identities/grants and deferred trigger bindings. Lint, typecheck, 34 unit tests and API/web builds passed. The first build hit sandbox `EPERM` creating Next output; the permitted retry passed. No interrupted review experiment was rerun. Hosted CI/PostgreSQL 17 remain unexecuted.
+
 ## Remaining verification gaps
 
 - Live Stripe calls, test-account multicapture availability, customer authentication and webhook forwarding.
 - Live RabbitMQ publisher confirms, crash/redelivery behavior, reconnects and DLQ replay; Redis/BullMQ scheduling.
-- Complete authorization matrix, journal immutability/currency edge tests, stale inbox leases, all out-of-order success/failure combinations, settlement races, payout versus refund/dispute races.
+- Complete authorization matrix, account currency/ownership semantics, stale inbox leases, all out-of-order success/failure combinations, settlement races, payout versus refund/dispute races. The F02 journal/header sealing cases are covered separately by the [fix record](audits/h1-fix-01-posted-ledger-immutability.md).
 - Provider settlement/report ingestion, real payouts, automated financial repair and missing-reference discovery.
 - Automated browser accessibility/responsive regression coverage and hosted CI results.
 

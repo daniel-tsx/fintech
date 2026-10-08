@@ -23,7 +23,12 @@ Records use UUIDs; provider object references use provider-issued strings. Money
 - Captured/refunded amounts cannot be negative and cannot exceed the payment amount/captured amount.
 - Ledger entries are positive, one-sided debit or credit rows.
 - Deferred constraint trigger rejects posted ledger transactions whose debits and credits differ, have fewer than two entries, or mix currencies.
+- Entry INSERT requires a DRAFT parent and updates that parent without changing its status. This serializes entry construction against posting and invalidates stale repeatable-read posting snapshots. [Migration 0002](../apps/api/drizzle/0002_seal_posted_ledger.sql) also refuses installation over existing invalid posted journals and blocks ledger-table TRUNCATE.
 - Triggers reject updates/deletes of posted ledger transactions, ledger entries and audit logs. A separate trigger protects webhook provider/event/type/signature/payload fields on updates.
 - Each capture attempt can appear in only one settlement item. Payout journals use unique ledger business references.
 
 Balance snapshots are deliberately not the source of truth. Current balances are calculated from ledger accounts and entries. A production system may maintain an asynchronously verified projection for scale.
+
+Ledger sealing, deferred balance checks, immutable-row triggers, functional account uniqueness and hand-authored foreign keys are SQL guarantees beyond the Drizzle table definitions. Keep the checked-in forward migrations; generating a table schema does not reproduce these triggers. The [F02 fix record](audits/h1-fix-01-posted-ledger-immutability.md) owns the change's migration and verification evidence.
+
+[Migration 0003](../apps/api/drizzle/0003_pin_ledger_function_context.sql) replaces the balance function in place with explicit `public` table/type references and pins all four ledger trigger functions to `pg_catalog, pg_temp` with `SECURITY INVOKER`. Ownership, execution grants and trigger identities are preserved. Its transactional preflight again refuses invalid POSTED history. Drain financial writers before applying: header/entry `SHARE ROW EXCLUSIVE` locks block writes during the scan and function replacement; ordinary reads remain possible.

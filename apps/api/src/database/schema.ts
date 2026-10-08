@@ -129,6 +129,8 @@ export const ledgerAccounts = pgTable('ledger_accounts', {
   code: text('code').notNull(), accountType: ledgerAccountType('account_type').notNull(), currency: text('currency').notNull(), name: text('name').notNull(), createdAt: createdAt(),
 }, (t) => [index('ledger_accounts_lookup_idx').on(t.merchantId, t.currency, t.code)]);
 
+// Forward SQL migrations own journal sealing and deferred balance/immutability
+// triggers; Drizzle's table definitions do not represent those guarantees.
 export const ledgerTransactions = pgTable('ledger_transactions', {
   id: uuid('id').primaryKey().defaultRandom(), merchantId: uuid('merchant_id').references(() => merchants.id),
   businessType: text('business_type').notNull(), businessId: uuid('business_id').notNull(), currency: text('currency').notNull(),

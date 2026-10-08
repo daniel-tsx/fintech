@@ -15,6 +15,20 @@
       "when": 1789970166058,
       "tag": "0001_lively_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791331200000,
+      "tag": "0002_seal_posted_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791417600000,
+      "tag": "0003_pin_ledger_function_context",
+      "breakpoints": true
     }
   ]
 }
