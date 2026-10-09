@@ -127,6 +127,28 @@ RUN_DB_TESTS=1 pnpm --filter @fintech-lab/api test:integration --runTestsByPath 
 
 The same Windows environment setup above applies. This suite uses only the disposable PostgreSQL database.
 
+### B1 allocation and migration tests
+
+Migration 0004 installs a **dormant** allocation foundation; current financial writers remain legacy. With `RUN_DB_TESTS=1`, the [foundation suite](../apps/api/test/integration/capture-accounting-foundation.spec.ts) exercises scoped evidence, capacity/lifecycle, rollback, zero effects and targeted locking. The [migration suite](../apps/api/test/integration/capture-accounting-migration.spec.ts) additionally requires `RUN_MIGRATION_TESTS=1` and `MIGRATION_ADMIN_URL` for a disposable **localhost** cluster with CREATE DATABASE permission. It creates and retains fresh UUID-named databases, never drops history or accepts remote admin hosts.
+
+```powershell
+$env:RUN_DB_TESTS='1'
+$env:RUN_MIGRATION_TESTS='1'
+pnpm --filter @fintech-lab/api test:integration --runTestsByPath test/integration/capture-accounting-foundation.spec.ts test/integration/capture-accounting-migration.spec.ts test/integration/posted-ledger-immutability.spec.ts test/integration/financial-concurrency.spec.ts --cacheDirectory ../../.tmp/jest-h1b1
+Remove-Item Env:RUN_DB_TESTS,Env:RUN_MIGRATION_TESTS
+```
+
+Set DATABASE_URL to a migrated disposable database and MIGRATION_ADMIN_URL to its disposable local cluster separately; do not print private URLs. Default tests skip database fixtures. CI's existing RUN_DB_TESTS integration job includes foundation cases; migration CREATE DATABASE fixtures remain an explicit extra opt-in and hosted execution is unverified.
+
+The [pending F01 suite](../apps/api/test/integration/settlement-f01.pending.spec.ts) additionally requires `RUN_F01_PENDING=1`. Its six correct-behavior assertions intentionally fail until B2, so exclude it from the green foundation command and report failed/expected pre-fix evidence distinctly:
+
+```powershell
+$env:RUN_DB_TESTS='1'
+$env:RUN_F01_PENDING='1'
+pnpm --filter @fintech-lab/api test:integration --runTestsByPath test/integration/settlement-f01.pending.spec.ts --cacheDirectory ../../.tmp/jest-h1b1
+Remove-Item Env:RUN_DB_TESTS,Env:RUN_F01_PENDING
+```
+
 ## Offline demo commands
 
 With the API and seeded database running, inspect the fixture and balance:
@@ -193,6 +215,10 @@ Additional local verification:
 On 2026-10-07, [H1 Fix 01](audits/h1-fix-01-posted-ledger-immutability.md) added and verified PostgreSQL journal sealing. Lint, typecheck, 34 unit tests and API/web builds passed. The full integration suite passed 20 tests on a fresh unseeded PostgreSQL 18.6 database; all 15 F02 tests also passed explicitly on an upgraded database with a balanced existing journal. The migration refused intentionally corrupted posted history. Seed/reseed and catalog checks passed. These are local results; hosted CI/PostgreSQL 17 remain unexecuted.
 
 On 2026-10-08, defensive function-context review added forward migration 0003 and two ordinary functional cases. Both new cases failed before hardening because the unqualified `ledger_status` type depended on the session search path. After migration, the fresh unseeded PostgreSQL 18.6 database passed all 22 integration tests; the upgraded database passed all 17 F02 cases. Fresh install, valid upgrade and refusal of retained invalid history were checked, including unchanged historical rows, function identities/grants and deferred trigger bindings. Lint, typecheck, 34 unit tests and API/web builds passed. The first build hit sandbox `EPERM` creating Next output; the permitted retry passed. No interrupted review experiment was rerun. Hosted CI/PostgreSQL 17 remain unexecuted.
+
+[B1 checkpoint evidence](audits/h1-fix-02-b1-allocation-foundation.md) records 2026-10-09 local results: 49 default unit tests, 19 foundation + 3 migration + 17 F02 + 5 existing PostgreSQL cases (44 total), API/web lint/typecheck/build, and six expected F01 failures. Fresh installation, seeded 0000–0003 upgrade, repeated migrator no-op and unscoped legacy refusal were exercised without changing immutable history. This verifies the dormant foundation; live F01 behavior and B2/B3 cutover remain unimplemented.
+
+[B1.1 correction evidence](audits/h1-fix-02-b1-allocation-foundation.md#b11-independent-review-corrections-2026-10-09) retains the independent REQUEST CHANGES findings and their regression fixes. Migration 0004, amended during B1.1 before commit, rejects unknown legacy ownership and partial finalization, and uses an exact numeric integer quotient. Local verification passed 50 unit tests and 30 foundation + 4 migration + 17 F02 + 5 existing PostgreSQL cases (56 total); all six unchanged F01 assertions still fail as expected. This updates foundation evidence without activating financial writers or resolving F01.
 
 ## Remaining verification gaps
 

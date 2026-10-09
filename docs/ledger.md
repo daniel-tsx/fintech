@@ -38,3 +38,11 @@ Construct a journal as `DRAFT`, insert its entries, then update it to `POSTED` i
 After posting, the header rejects UPDATE/DELETE and entries reject INSERT/UPDATE/DELETE. Ledger-table TRUNCATE is also rejected. A correction uses a new balanced journal; its `reversal_of_id` may reference the sealed original without changing it. See the [F02 fix record](audits/h1-fix-01-posted-ledger-immutability.md) for before/after PostgreSQL evidence and migration limitations.
 
 [Migration 0003](../apps/api/drizzle/0003_pin_ledger_function_context.sql) qualifies persistent ledger tables and the ledger status type, and fixes the ledger trigger functions' search path to `pg_catalog, pg_temp`. Balance validation therefore resolves the same financial objects regardless of the session search path. The functions retain invoker privileges, existing grants and deferred trigger bindings.
+
+## Dormant capture allocation foundation
+
+The [B1 helper](../apps/api/src/ledger/capture-allocation.ts) implements the approved future capture-owned policy with BigInt minor units and exact epoch microsecond chronology, then capture-attempt ID ties. It subtracts confirmed refunds, reserved refunds, active/planned dispute principal and lost dispute principal from gross capacity. Replay returns frozen attribution rather than reassigning it to later captures.
+
+For capture gross G and fee F, cumulative confirmed refund R returns `floor(F × R / G)`; each confirmation uses the difference from previously confirmed fee. Capture 1000/fee101 refunded 333,333,334 returns 33,34,34. Original capture fees, including fixed fees, are used without recalculating today's merchant terms. Intermediate multiplication is exact. Existing Number API/service money representation remains unchanged.
+
+This helper is not imported by current financial services. Today's refund fee formula remains payment-wide; settlement/refund/dispute behavior is not fixed by installing the B1 tables. [The approved contract](audits/h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09) and [B1 evidence](audits/h1-fix-02-b1-allocation-foundation.md) distinguish the future policy from current runtime behavior.

@@ -49,6 +49,8 @@ Start with the [project overview](../README.md). Each document below owns its na
 
 - [H1 financial correctness audit](audits/h1-financial-correctness.md) — historical findings for the audited revision, with follow-up links.
 - [H1 Fix 01: posted ledger immutability](audits/h1-fix-01-posted-ledger-immutability.md) — F02 implementation, migration considerations and regression evidence. Current accounting/database behavior remains owned by Ledger and Database design above.
+- [H1 Fix 02: settlement accounting design](audits/h1-fix-02-settlement-design.md) — approved Approach A / pending-refund Option A contract and regression matrix, preserving original Run A evidence; runtime integration remains planned.
+- [H1 Fix 02 B1: allocation foundation](audits/h1-fix-02-b1-allocation-foundation.md) — dormant schema/helper checkpoint, migration safeguards and executed regressions; F01 remains open and current flow ownership stays above.
 
 ## Historical material
 

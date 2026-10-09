@@ -21,6 +21,8 @@ Read the [project overview](../README.md), [documentation index](README.md), pac
 
 API code paths above are relative to `apps/api/src/` unless stated otherwise. Test claims against `apps/api/test/`. The immutable triggers and functional indexes in SQL exceed what the Drizzle schema describes.
 
+For ongoing F01 work, also read the [approved capture accounting contract](audits/h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09) and [B1 checkpoint](audits/h1-fix-02-b1-allocation-foundation.md). B1 installs dormant evidence tables/helpers; current financial writers remain legacy. Do not consume partially populated allocation state or treat schema installation as cutover.
+
 ## Evidence to preserve
 
 For financial changes, name the invariant and its transaction boundary before coding. Check duplicate execution, failure after remote success, rollback, tenant ownership and conflicting concurrent operations where relevant. Keep tests specific to the risk; a mocked happy path is not evidence for a database race.

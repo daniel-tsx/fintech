@@ -117,6 +117,8 @@ Existing indexes support journal/account balance joins, payment/refund lookup, b
 
 ### F01 — Settlement releases refunded or held funds
 
+**Follow-up, 2026-10-09:** [Run A's approved contract](h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09) and the [B1 allocation checkpoint](h1-fix-02-b1-allocation-foundation.md) provide dormant schema/helpers and preserve six opt-in failing behavioral regressions. Current financial writers are unchanged; F01 remains open pending B2/B3. Original finding evidence below is retained.
+
 **CONFIRMED ISSUE — H1 / Critical.** Location: [SettlementsService.generate/complete](../../apps/api/src/settlements/settlements.service.ts), lines 15–66; `settlement_items`, original `CAPTURE` journals; [RefundsService.applySucceeded](../../apps/api/src/refunds/refunds.service.ts) and [DisputesService.open](../../apps/api/src/disputes/disputes.service.ts).
 
 **Current behavior:** generation selects successful capture attempts without an existing item, then copies original gross/fee/net credits from the capture journal. It does not subtract refund journals or honor dispute holds. Completion transfers that original net from pending to available without checking remaining eligible liability.
