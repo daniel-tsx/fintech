@@ -11,6 +11,8 @@ describe('WebhookBusinessService capture completion', () => {
     const queries: string[] = [];
     const tx = jest.fn((strings: TemplateStringsArray) => {
       const query = strings.join('?'); queries.push(query);
+      if (query.includes('from public.payments')) return Promise.resolve([{ merchant_id: 'merchant-1', currency: 'USD' }]);
+      if (query.includes('insert into public.capture_accounting_lots')) return Promise.resolve([{ id: 'lot-1' }]);
       if (query.includes('from payment_attempts where id=')) return Promise.resolve([{
         status: 'PROCESSING', amount: '2500', merchant_id: 'merchant-1', payment_id: 'payment-1', currency: 'USD', provider_transaction_id: 'pi_123',
       }]);
@@ -18,7 +20,7 @@ describe('WebhookBusinessService capture completion', () => {
         id: 'payment-1', merchant_id: 'merchant-1', status: 'CAPTURE_PENDING', capture_method: 'MANUAL', amount: '2500', authorized_amount: '2500',
         captured_amount: '0', refunded_amount: '0', platform_fee_amount: '0', currency: 'USD',
       }]);
-      if (query.includes('select fee_bps')) return Promise.resolve([{ fee_bps: 300, fixed_fee_minor: '0' }]);
+      if (query.includes('select fee_bps')) return Promise.resolve([{ fee_bps: 300, fixed_fee_minor: '0', settlement_delay_days: 2 }]);
       return Promise.resolve([]);
     }) as unknown as DbTransaction;
     const post = jest.fn().mockResolvedValue('journal-1');

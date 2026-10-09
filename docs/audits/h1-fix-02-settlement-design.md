@@ -2,7 +2,7 @@
 
 Status: planned runtime; Approach A approved for B1. Owner: F01 accounting design and regression contract. Date: 2026-10-09.
 
-Sections 1–15 preserve **Run A** proposals and its original evidence. The subsequent human approval is recorded in section 16; the [B1 checkpoint](h1-fix-02-b1-allocation-foundation.md) installs a dormant schema/helper foundation. Runtime integration remains pending. [Settlement and payout](../settlement-and-payout.md), [Refunds and disputes](../refunds-and-disputes.md), [Ledger](../ledger.md), [Database design](../database-design.md) and [Concurrency](../concurrency.md) remain the current behavior owners. This report follows [F01 in the historical H1 audit](h1-financial-correctness.md#f01--settlement-releases-refunded-or-held-funds).
+Sections 1–15 preserve **Run A** proposals and its original evidence. The subsequent human approval is recorded in section 16; the [B1 checkpoint](h1-fix-02-b1-allocation-foundation.md) installs a dormant schema/helper foundation. [B2.1](h1-fix-02-b2-1-capture-integration.md) integrates new original capture lots only; refund/dispute/settlement runtime integration and activation remain pending. [Settlement and payout](../settlement-and-payout.md), [Refunds and disputes](../refunds-and-disputes.md), [Ledger](../ledger.md), [Database design](../database-design.md) and [Concurrency](../concurrency.md) remain the current behavior owners. This report follows [F01 in the historical H1 audit](h1-financial-correctness.md#f01--settlement-releases-refunded-or-held-funds).
 
 ## 1. Executive summary
 

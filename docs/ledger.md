@@ -41,6 +41,8 @@ After posting, the header rejects UPDATE/DELETE and entries reject INSERT/UPDATE
 
 ## Dormant capture allocation foundation
 
+The capture webhook now writes one original accounting lot with each newly confirmed CAPTURE journal, attempt/payment transition and audit in the caller's transaction. It copies actual journal gross/fee/net and PostgreSQL `posted_at`, checks their agreement with the financial effect, and freezes eligibility. It refuses an incomplete attempt with a pre-existing journal instead of guessing historical terms. Already successful attempts do not create another journal or infer a historical lot. [B2.1](audits/h1-fix-02-b2-1-capture-integration.md) records this integration; lot state is not yet a current refund/settlement balance projection and no scope is ACTIVE.
+
 The [B1 helper](../apps/api/src/ledger/capture-allocation.ts) implements the approved future capture-owned policy with BigInt minor units and exact epoch microsecond chronology, then capture-attempt ID ties. It subtracts confirmed refunds, reserved refunds, active/planned dispute principal and lost dispute principal from gross capacity. Replay returns frozen attribution rather than reassigning it to later captures.
 
 For capture gross G and fee F, cumulative confirmed refund R returns `floor(F × R / G)`; each confirmation uses the difference from previously confirmed fee. Capture 1000/fee101 refunded 333,333,334 returns 33,34,34. Original capture fees, including fixed fees, are used without recalculating today's merchant terms. Intermediate multiplication is exact. Existing Number API/service money representation remains unchanged.
