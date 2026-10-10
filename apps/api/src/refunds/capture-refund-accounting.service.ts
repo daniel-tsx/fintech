@@ -6,6 +6,7 @@ import { IdempotencyService } from '../common/idempotency.service';
 import { DatabaseService, type DbTransaction } from '../database/database.service';
 import { allocateRefundFifo, captureRefundFeeDelta, type FrozenRefundAllocation } from '../ledger/capture-allocation';
 import { LedgerService } from '../ledger/ledger.service';
+import { reduceDisputeHolds } from '../ledger/dispute-hold-adjustment';
 import type { LedgerAccountCode, LedgerLine } from '../ledger/ledger.types';
 import { OutboxService } from '../outbox/outbox.service';
 import type { PaymentStatus } from '../payments/payment-state.machine';
@@ -47,7 +48,7 @@ export class CaptureRefundAccountingService {
     this.exactAmount(dto.amount);
     return this.idempotency.execute({merchantId,operation:`refund.create:${paymentId}`,key,payload:dto,responseStatus:202,action:async (tx) => {
       const payment=await this.lockPaymentScope(tx,paymentId,merchantId);
-      if (!['CAPTURED','PARTIALLY_REFUNDED'].includes(payment.status)) throw new DomainError('PAYMENT_NOT_REFUNDABLE','Payment is not refundable',409);
+      if (!['CAPTURED','PARTIALLY_REFUNDED','DISPUTED'].includes(payment.status)) throw new DomainError('PAYMENT_NOT_REFUNDABLE','Payment is not refundable',409);
       const lots=await this.lockLots(tx,payment);
       const conflict=await this.historyConflict(tx,payment,lots);
       if (conflict) throw new DomainError('ACCOUNTING_REVIEW_REQUIRED',conflict,409);
@@ -130,21 +131,24 @@ export class CaptureRefundAccountingService {
     }
     const conflict=await this.historyConflict(tx,payment,lots);
     if (conflict) return exception(conflict);
-    if (!['CAPTURED','PARTIALLY_REFUNDED'].includes(payment.status)) return exception(`Confirmed refund cannot apply safely in payment state ${payment.status}`);
+    if (!['CAPTURED','PARTIALLY_REFUNDED','DISPUTED'].includes(payment.status)) return exception(`Confirmed refund cannot apply safely in payment state ${payment.status}`);
+    if (allocations.some(a=>!lots.some(l=>l.id===a.capture_lot_id))) return exception('Frozen allocation no longer has verified capture ownership');
     const lines:LedgerLine[]=[]; const fees=new Map<string,bigint>(); let returnedFee=0n;
     const add=(code:LedgerAccountCode,amount:bigint,side:'debit'|'credit') => {
       if (amount>0n) lines.push({accountCode:code,merchantId:code.startsWith('MERCHANT_')?payment.merchant_id:null,[side]:this.ledgerAmount(amount)});
     };
     for (const a of allocations) {
       const l=lots.find((row) => row.id===a.capture_lot_id);
-      if (!l) return exception('Frozen allocation no longer has verified capture ownership');
+      if (!l) throw new Error('Validated capture allocation disappeared');
       const gross=BigInt(a.reserved_gross);
       const fee=captureRefundFeeDelta({originalGross:BigInt(l.original_gross),originalFee:BigInt(l.original_fee),previousConfirmedGross:BigInt(l.refunded),
         cumulativeConfirmedGross:BigInt(l.refunded)+gross,previousConfirmedFee:BigInt(l.returned_fee)});
       const net=gross-fee;
       const entitlement=BigInt(l.original_gross)-BigInt(l.original_fee)-(BigInt(l.refunded)-BigInt(l.returned_fee))-BigInt(l.lost);
-      const held=BigInt(l.held); const after=entitlement-net;
-      if (held>(after>0n?after:0n)) return exception('Refund requires dispute funding adjustments not integrated in B2.2');
+      const after=entitlement-net;
+      const adjustment=await reduceDisputeHolds(tx,this.ledger,{lotId:l.id,paymentId:payment.id,merchantId:payment.merchant_id,currency:payment.currency,
+        settled:l.settlement_state==='FINALIZED',survivingEntitlement:after,inboxId,cause:'REFUND',causeId:refund.id});
+      const held=BigInt(l.held)-adjustment.released;
       const ownPending=entitlement-held>0n?entitlement-held:0n;
       const pending=l.settlement_state==='FINALIZED'?0n:(ownPending<net?ownPending:net);
       add('MERCHANT_PENDING',pending,'debit'); add('MERCHANT_AVAILABLE',net-pending,'debit'); add('PLATFORM_FEE_REFUNDS',fee,'debit');
@@ -153,12 +157,14 @@ export class CaptureRefundAccountingService {
     }
     // Keep the existing Number ledger/API boundary explicit; arithmetic above is exact.
     this.ledgerAmount(BigInt(refund.amount));
-    const journal=await this.ledger.post(tx,{merchantId:payment.merchant_id,businessType:'REFUND',businessId:refund.id,currency:payment.currency,description:`Refund ${refund.id}`,lines});
+    const journal=await this.ledger.post(tx,{merchantId:payment.merchant_id,businessType:'REFUND',businessId:refund.id,currency:payment.currency,description:`Refund ${refund.id}`,
+      lines:lines.sort((a,b)=>a.accountCode.localeCompare(b.accountCode))});
     for (const a of allocations) await tx`update public.refund_capture_allocations set status='CONFIRMED',confirmed_gross=reserved_gross,
       confirmed_fee=${fees.get(a.id)!.toString()},journal_id=${journal},provider_event_id=${inboxId} where id=${a.id}`;
     const refunded=BigInt(payment.refunded_amount)+BigInt(refund.amount);
     if (refunded>BigInt(payment.captured_amount)) throw new DomainError('INVALID_REFUND_TOTAL','Refund exceeds captured principal',409);
-    const status=refunded===BigInt(payment.captured_amount)?'REFUNDED':'PARTIALLY_REFUNDED';
+    const [open]=await tx<{found:boolean}[]>`select exists(select 1 from public.disputes where payment_id=${payment.id} and status='OPEN') as found`;
+    const status=open.found?'DISPUTED':refunded===BigInt(payment.captured_amount)?'REFUNDED':'PARTIALLY_REFUNDED';
     await tx`update public.refunds set status='SUCCEEDED',platform_fee_amount=${returnedFee.toString()},provider_transaction_id=${data.providerTransactionId},updated_at=now() where id=${refund.id}`;
     await tx`update public.payments set status=${status},refunded_amount=${refunded.toString()},version=version+1,updated_at=now() where id=${payment.id}`;
     await this.audit.append(tx,{merchantId:payment.merchant_id,actor:{type:'PROVIDER',id:data.providerTransactionId},action:'refund.succeeded',targetType:'payment',targetId:payment.id,
@@ -184,6 +190,8 @@ export class CaptureRefundAccountingService {
     await tx`select id from public.refunds where payment_id=${p.id} order by id for update`;
     await tx`select id from public.disputes where payment_id=${p.id} order by id for update`;
     await tx`select id from public.capture_accounting_lots where payment_id=${p.id} order by capture_attempt_id for update`;
+    await tx`select id from public.dispute_capture_allocations where payment_id=${p.id} order by capture_lot_id,id for update`;
+    await tx`select id from public.refund_capture_allocations where payment_id=${p.id} order by capture_lot_id,id for update`;
     return tx<Lot[]>`select l.id,l.capture_attempt_id,a.provider_transaction_id as provider_reference,l.original_gross::text,l.original_fee::text,
       (extract(epoch from l.financial_captured_at)*1000000)::bigint::text as financial_micros,l.settlement_state,
       (l.origin='NEW_CAPTURE' and l.eligible_at is not null and v.original_valid and v.journal_id=l.capture_journal_id
@@ -209,7 +217,8 @@ export class CaptureRefundAccountingService {
       or exists(select 1 from public.refunds r where payment_id=${p.id} and status in ('PENDING','PROCESSING','SUCCEEDED')
         and (select coalesce(sum(reserved_gross) filter(where status<>'RELEASED'),0) from public.refund_capture_allocations where refund_id=r.id)<>r.amount)
       or exists(select 1 from public.disputes d where payment_id=${p.id} and
-        (select coalesce(sum(gross_principal),0) from public.dispute_capture_allocations where dispute_id=d.id)<>d.amount)
+        ((select coalesce(sum(gross_principal),0) from public.dispute_capture_allocations where dispute_id=d.id)<>d.amount
+          or exists(select 1 from public.dispute_capture_allocations a where dispute_id=d.id and (a.status<>d.status or a.outcome is distinct from d.outcome))))
       or exists(select 1 from public.settlement_items where payment_id=${p.id} and capture_lot_id is null) as blocked`;
     return history.blocked?'Blocking exception or unallocated legacy financial history requires review':null;
   }

@@ -2,6 +2,8 @@
 
 Status: current.
 
+[B2.3 dispute integration](audits/h1-fix-02-b2-3-dispute-integration.md) remains dormant. Its tests use valid finalized capture/item/batch/journal fixtures to distinguish current cash/available from unsettled PSP/pending and preserve restricted holds. These fixtures do not implement allocation-aware settlement. Legacy generation/completion and pooled payout behavior remain unchanged; no scope is ACTIVE and F01/F04 remain open. B2.4 must coordinate new settlement evidence and all financial writers before cutover.
+
 ```mermaid
 flowchart LR
   C[Captured] --> MP[Merchant pending]

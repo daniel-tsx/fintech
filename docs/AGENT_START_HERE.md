@@ -25,6 +25,8 @@ For ongoing F01 work, also read the [approved capture accounting contract](audit
 
 [B2.2 refund integration](audits/h1-fix-02-b2-2-refund-integration.md) adds a separate gated service tested with synthetic dormant admission. It is absent from runtime modules/controllers/webhook dispatch; no production switch enables it. Read its cutover and lock dependencies before wiring it. Migration 0005 adds an exception inbox disposition, not ACTIVE scopes or live refund routing.
 
+[B2.3 dispute integration](audits/h1-fix-02-b2-3-dispute-integration.md) adds the similarly disconnected dispute service and shared hold reductions in both dormant paths. Read its provider evidence, payment-state and lock dependencies before wiring either service. All scopes remain dormant; legacy settlement/refund/dispute/payout semantics remain unchanged.
+
 ## Evidence to preserve
 
 For financial changes, name the invariant and its transaction boundary before coding. Check duplicate execution, failure after remote success, rollback, tenant ownership and conflicting concurrent operations where relevant. Keep tests specific to the risk; a mocked happy path is not evidence for a database race.

@@ -530,14 +530,14 @@ describeDatabase('B2.2 dormant refund service transactions (not runtime dispatch
     const [d]=await database.sql`select funded_hold::text as hold,status from dispute_capture_allocations where payment_id=${f.paymentId}`;
     expect(d).toEqual({hold:'1000',status:'OPEN'});
   });
-  it('records a blocking exception when a disjoint refund would require B2.3 hold funding adjustments', async () => {
+  it('B2.3 adjusts funded holds before confirming a disjoint refund', async () => {
     const f=await capture(1000,800); await allocatedDispute(f,100,100);
-    const r=await request(f,900); const before=await fingerprint(f); const id=await evidence(f,r,900);
-    expect(await apply(id)).toBe('ACCOUNTING_EXCEPTION'); expect(await fingerprint(f)).toEqual(before);
-    const [e]=await database.sql`select category,refund_id,dispute_id from accounting_exceptions where provider_event_id=${id}`;
-    expect(e.category).toBe('AMBIGUOUS_PROVIDER_NET_EFFECT'); expect(e.refund_id).toBe(r); expect(e.dispute_id).toBeTruthy();
-    expect((await allocations(r))[0].status).toBe('RESERVED');
-    await balances(f,{MERCHANT_PENDING:'100',DISPUTE_CLEARING:'100',PLATFORM_FEE_REFUNDS:'0',PSP_CLEARING:'1000'});
+    const r=await request(f,900); const id=await evidence(f,r,900);
+    expect(await apply(id)).toBe('PROCESSED'); expect(await apply(id)).toBe('PROCESSED');
+    const effects=await database.sql`select hold_delta::text,cause_refund_id,provider_event_id from dispute_hold_effects where payment_id=${f.paymentId}`;
+    expect(effects).toEqual([{hold_delta:'-80',cause_refund_id:r,provider_event_id:id}]);
+    expect((await allocations(r))[0].status).toBe('CONFIRMED');
+    await balances(f,{MERCHANT_PENDING:'0',DISPUTE_CLEARING:'20',PLATFORM_FEE_REFUNDS:'720',PSP_CLEARING:'100'});
   });
   it('subtracts finalized loss principal and debits explained debt rather than creating negative pending', async () => {
     const f=await capture(1000,900); const dispute=await allocatedDispute(f,900,100);
