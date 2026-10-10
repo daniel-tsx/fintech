@@ -152,7 +152,7 @@ Remove-Item Env:RUN_DB_TESTS,Env:RUN_MIGRATION_TESTS
 
 Set DATABASE_URL to a migrated disposable database and MIGRATION_ADMIN_URL to its disposable local cluster separately; do not print private URLs. Default tests skip database fixtures. CI's existing RUN_DB_TESTS integration job includes foundation cases; migration CREATE DATABASE fixtures remain an explicit extra opt-in and hosted execution is unverified.
 
-The [pending F01 suite](../apps/api/test/integration/settlement-f01.pending.spec.ts) additionally requires `RUN_F01_PENDING=1`. Its six correct-behavior assertions intentionally fail until B2, so exclude it from the green foundation command and report failed/expected pre-fix evidence distinctly:
+The [pending F01 suite](../apps/api/test/integration/settlement-f01.pending.spec.ts) additionally requires `RUN_F01_PENDING=1`. Its six correct-behavior assertions still target legacy runtime and intentionally fail until coordinated cutover, so exclude it from the green foundation command and report failed/expected legacy evidence distinctly:
 
 ```powershell
 $env:RUN_DB_TESTS='1'
@@ -160,6 +160,18 @@ $env:RUN_F01_PENDING='1'
 pnpm --filter @fintech-lab/api test:integration --runTestsByPath test/integration/settlement-f01.pending.spec.ts --cacheDirectory ../../.tmp/jest-h1b1
 Remove-Item Env:RUN_DB_TESTS,Env:RUN_F01_PENDING
 ```
+
+### B2.4 settlement integration tests
+
+For [B2.4's separate dormant settlement suite](../apps/api/test/integration/settlement-accounting-integration.spec.ts), use a disposable database with migrations 0000–0005 and RUN_DB_TESTS=1:
+
+```powershell
+$env:RUN_DB_TESTS='1'
+pnpm --filter @fintech-lab/api test:integration --runTestsByPath test/integration/settlement-accounting-integration.spec.ts --cacheDirectory ../../.tmp/jest-h1b24
+Remove-Item Env:RUN_DB_TESTS
+```
+
+These are direct service tests with test-only dormant admission. Production settlement routes/jobs remain legacy, no scope becomes ACTIVE, and the six opt-in F01 reproductions remain separate red evidence. The suite uses actual dormant refund/dispute methods and two actual WebhookBusinessService capture cases; it does not establish full signed new-policy routing, scheduler/receipt races, real provider settlement or F04 closure.
 
 ## Offline demo commands
 
@@ -241,6 +253,8 @@ On 2026-10-08, defensive function-context review added forward migration 0003 an
 [B2.3 dispute evidence](audits/h1-fix-02-b2-3-dispute-integration.md) records 2026-10-10 local Node24.19.0/pnpm10.26.0/PostgreSQL18.6 checks against a fresh 0000–0005 database. Final lint/typecheck, 50 unit tests and API/web builds passed. All seven financial PostgreSQL suites passed **205 cases**, none skipped: 58 dispute, 63 refund, 27 capture, 30 foundation, 5 migration, 17 F02 and 5 existing concurrency. The six unchanged opt-in F01 settlement assertions failed as expected; no active accounting scope or runtime registration was added. Account-level, rollback, provider-identity, hold-adjustment and observed lock schedules verify the dormant checkpoint only. Exact commands, corrected initial fixture/static failures and B2.4/B3 limits are in the record. No hosted CI, live provider/broker or full signed dispute dispatch verification is claimed.
 
 [B2.3.1 prerequisite correction](audits/h1-fix-02-b2-3-dispute-integration.md#b231-independent-review-and-prerequisite-correction) preserves the independent P1 finding: trusted close-before-open must retry before payment-state admission, including during a later pending capture, while untrusted provider relationships still require accounting review. Twelve permanent PostgreSQL cases ran against the old service (5 failed / 7 passed) and then passed after correction. The complete rerun passed **217 cases**, none skipped: 70 dispute plus the unchanged 147 refund/capture/foundation/migration/F02/concurrency cases. Lint/typecheck, 50 unit tests and API/web builds passed; Corepack was rerun with its installed offline cache after a sandbox lookup failure, and the build required a permitted retry after sandbox EPERM. All six F01 assertions were rerun and remain red. Scope activation, migrations, financial policy and legacy runtime dispatch remain unchanged. Tests retain original inbox evidence through service-level prerequisite/rollback and replay; scheduler backoff/dead-letter and full signed dispute routing remain unverified. Exact commands and prior review evidence remain in the checkpoint.
+
+[B2.4 settlement evidence](audits/h1-fix-02-b2-4-settlement-integration.md) records 2026-10-10 implementation from accepted clean `main` at c44b488. Final lint/typecheck, 50 unit tests and API/web builds passed; the build required a permitted retry after sandbox EPERM creating Next output. Eight PostgreSQL suites passed **290 cases**, none skipped: 73 settlement plus all 217 accepted dispute/refund/capture/foundation/migration/F02/concurrency cases. New cases assert actual accounts, candidate estimates/final amounts, source ownership, zero effects, saved replay, rollback, deferred evidence and 22 observed service lock schedules. The six unchanged legacy F01 assertions ran before and after implementation and failed on the same accounting results. No migration, runtime registration, activation or financial policy change occurred. Exact commands, initial assertion/static failures and B3/F01/F04 limits are in the checkpoint; hosted CI/live Stripe/broker/Redis and full signed new-policy dispatch remain unverified.
 
 ## Remaining verification gaps
 

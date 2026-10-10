@@ -27,6 +27,8 @@ For ongoing F01 work, also read the [approved capture accounting contract](audit
 
 [B2.3 dispute integration](audits/h1-fix-02-b2-3-dispute-integration.md) adds the similarly disconnected dispute service and shared hold reductions in both dormant paths. Read its provider evidence, payment-state and lock dependencies before wiring either service. All scopes remain dormant; legacy settlement/refund/dispute/payout semantics remain unchanged.
 
+[B2.4 settlement integration](audits/h1-fix-02-b2-4-settlement-integration.md) adds disconnected candidate generation and recalculated completion using the same capture/allocation evidence. Read its header-first locks, independent asset/release amounts, zero effects, saved-snapshot replay and B3 dispatch/admission dependencies. No runtime route/job consumes the new service, no scope is ACTIVE, and the six legacy F01 reproductions remain red. Do not treat the dormant checkpoint as financial cutover.
+
 ## Evidence to preserve
 
 For financial changes, name the invariant and its transaction boundary before coding. Check duplicate execution, failure after remote success, rollback, tenant ownership and conflicting concurrent operations where relevant. Keep tests specific to the risk; a mocked happy path is not evidence for a database race.
