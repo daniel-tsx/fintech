@@ -23,6 +23,8 @@ API code paths above are relative to `apps/api/src/` unless stated otherwise. Te
 
 For ongoing F01 work, also read the [approved capture accounting contract](audits/h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09), [B1 checkpoint](audits/h1-fix-02-b1-allocation-foundation.md) and [B2.1 capture integration](audits/h1-fix-02-b2-1-capture-integration.md). Confirmed new captures now append original journal-backed lots atomically. Refund/dispute/settlement writers remain legacy and every scope remains dormant. Do not consume partially populated allocation state or treat lot creation as cutover.
 
+[B2.2 refund integration](audits/h1-fix-02-b2-2-refund-integration.md) adds a separate gated service tested with synthetic dormant admission. It is absent from runtime modules/controllers/webhook dispatch; no production switch enables it. Read its cutover and lock dependencies before wiring it. Migration 0005 adds an exception inbox disposition, not ACTIVE scopes or live refund routing.
+
 ## Evidence to preserve
 
 For financial changes, name the invariant and its transaction boundary before coding. Check duplicate execution, failure after remote success, rollback, tenant ownership and conflicting concurrent operations where relevant. Keep tests specific to the risk; a mocked happy path is not evidence for a database race.

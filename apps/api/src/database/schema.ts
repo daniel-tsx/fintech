@@ -22,7 +22,7 @@ export const paymentStatus = pgEnum('payment_status', [
 ]);
 export const captureMethod = pgEnum('capture_method', ['MANUAL', 'AUTOMATIC']);
 export const operationStatus = pgEnum('operation_status', ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED']);
-export const inboxStatus = pgEnum('inbox_status', ['PENDING', 'PROCESSING', 'PROCESSED', 'RETRY', 'IGNORED', 'DEAD']);
+export const inboxStatus = pgEnum('inbox_status', ['PENDING', 'PROCESSING', 'PROCESSED', 'RETRY', 'IGNORED', 'DEAD', 'ACCOUNTING_EXCEPTION']);
 export const outboxStatus = pgEnum('outbox_status', ['PENDING', 'PROCESSING', 'PUBLISHED', 'FAILED', 'DEAD']);
 export const ledgerAccountType = pgEnum('ledger_account_type', ['ASSET', 'LIABILITY', 'REVENUE', 'EXPENSE']);
 export const ledgerStatus = pgEnum('ledger_status', ['DRAFT', 'POSTED', 'REVERSED']);

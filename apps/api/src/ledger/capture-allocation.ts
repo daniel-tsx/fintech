@@ -1,4 +1,4 @@
-// B1 foundation only: no runtime service imports this module.
+// Allocation contract; B2.2's gated refund service is not connected to runtime.
 export const CAPTURE_ACCOUNTING_POLICY = 'CAPTURE_FIFO_V1';
 const MAX_MINOR_UNITS = 9_223_372_036_854_775_807n;
 

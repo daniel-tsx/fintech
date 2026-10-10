@@ -42,25 +42,39 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
       (select md5(coalesce(string_agg(to_jsonb(e)::text,'|' order by e.id),'')) from ledger_entries e) as entries`;
     return row;
   }
-  function historicalFolder() {
+  function historicalFolder(before = 4) {
     const target = resolve(__dirname,`../../../../.tmp/b1-migrations-${randomUUID()}`); mkdirSync(resolve(target,'meta'),{recursive:true});
     const journal = JSON.parse(readFileSync(resolve(folder,'meta/_journal.json'),'utf8')) as { entries: {idx:number;tag:string}[] };
-    journal.entries=journal.entries.filter((entry) => entry.idx<4);
+    journal.entries=journal.entries.filter((entry) => entry.idx<before);
     writeFileSync(resolve(target,'meta/_journal.json'),JSON.stringify(journal));
     for (const entry of journal.entries) copyFileSync(resolve(folder,`${entry.tag}.sql`),resolve(target,`${entry.tag}.sql`));
     return target;
   }
-  it('installs 0000–0004 on an empty database; repeated migrator execution is a no-op', async () => {
+  it('installs 0000–0005 on an empty database; repeated migrator execution is a no-op', async () => {
     const database = await isolated(); await apply(database,folder);
     const before = await fingerprint(database); await apply(database,folder);
     expect(await fingerprint(database)).toEqual(before);
     const [row] = await database.sql`select (select count(*)::integer from drizzle.__drizzle_migrations) as migrations,
       (select count(*)::integer from capture_accounting_lots) as lots,(select count(*)::integer from accounting_exceptions) as exceptions`;
-    expect(row).toMatchObject({migrations:5,lots:0,exceptions:0});
+    expect(row).toMatchObject({migrations:6,lots:0,exceptions:0});
     const functions = await database.sql<{prosecdef:boolean;proconfig:string[]}[]>`select prosecdef,proconfig from pg_proc where pronamespace='public'::regnamespace and proname in
       ('validate_capture_accounting_lot','prepare_capture_allocation_write','check_capture_allocation_bounds','require_accounting_journal','check_capture_allocation_effect','protect_accounting_foundation_evidence','check_accounting_settlement_evidence','protect_allocated_intent_amount')`;
     expect(functions).toHaveLength(8);
     for (const f of functions) { expect(f.prosecdef).toBe(false); expect(f.proconfig).toEqual(['search_path=pg_catalog, pg_temp']); }
+  },30000);
+  it('upgrades 0004 with a dormant exception disposition without rewriting history or activating scopes', async () => {
+    const database = await isolated(); await apply(database,historicalFolder(5));
+    const f = await captureFixture(database);
+    await database.sql`insert into capture_accounting_scopes (merchant_id,currency) values (${f.merchantId},'USD')`;
+    const before = await fingerprint(database); await apply(database,folder); await apply(database,folder);
+    expect(await fingerprint(database)).toEqual(before);
+    const labels = await database.sql<{enumlabel:string}[]>`select enumlabel from pg_enum where enumtypid='public.inbox_status'::regtype and enumlabel='ACCOUNTING_EXCEPTION'`;
+    expect(labels).toEqual([{enumlabel:'ACCOUNTING_EXCEPTION'}]);
+    const [scope] = await database.sql`select status from capture_accounting_scopes where merchant_id=${f.merchantId}`;
+    expect(scope.status).toBe('FOUNDATION_ONLY');
+    // The label is usable only after the migrator's transaction has committed.
+    await database.sql`insert into webhook_events (provider,provider_event_id,event_type,signature,payload,status)
+      values ('STRIPE',${randomUUID()},'local.fixture','local-fixture','{}'::jsonb,'ACCOUNTING_EXCEPTION')`;
   },30000);
   it('preserves immutable history and inventories clean, settled, adjusted and invalid legacy captures', async () => {
     const database = await isolated(); await apply(database,historicalFolder());
