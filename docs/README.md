@@ -55,6 +55,7 @@ Start with the [project overview](../README.md). Each document below owns its na
 - [H1 Fix 02 B2.2: refund integration](audits/h1-fix-02-b2-2-refund-integration.md) — gated dormant refund service, frozen FIFO reservations, exact source-specific journals and exception evidence; runtime dispatch/cutover remains blocked pending coordinated writers.
 - [H1 Fix 02 B2.3: dispute integration](audits/h1-fix-02-b2-3-dispute-integration.md) — dormant capture-owned holds, win/loss and shared refund/loss hold reductions; isolated transaction/concurrency evidence and remaining runtime cutover requirements.
 - [H1 Fix 02 B2.4: settlement integration](audits/h1-fix-02-b2-4-settlement-integration.md) — dormant capture-owned candidate generation, authoritative completion, independent asset/release effects, zero finalization and historical replay; live cutover/F01/F04 remain open.
+- [H1 Fix 02 B3.1: integrated verification](audits/h1-fix-02-b3-1-integrated-verification.md) — actual capture-to-payout lifecycle evidence, account oracles, controlled cross-writer schedules and explicit receipt/exception/legacy cutover gaps; authorizes no activation.
 
 ## Historical material
 

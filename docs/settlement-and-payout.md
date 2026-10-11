@@ -4,6 +4,8 @@ Status: current.
 
 [B2.4 settlement integration](audits/h1-fix-02-b2-4-settlement-integration.md) adds a separate dormant allocation-aware service. It is absent from production routes/jobs and shares the dormant refund/dispute protocol in direct PostgreSQL tests. Legacy generation/completion and pooled payout behavior below remain unchanged; no scope is ACTIVE and F01/F04 remain open pending B3 cutover. Earlier B2.2/B2.3 synthetic settlement fixtures remain setup evidence, distinct from the new actual service tests.
 
+[B3.1 integrated verification](audits/h1-fix-02-b3-1-integrated-verification.md) exercises actual captures, dormant accounting writers and current payouts together. It confirms account attribution and participating-writer serialization, while reproducing late receipt during completion and payout despite an OPEN accounting exception. These are explicit B3.2 admission/cutover prerequisites; no current runtime behavior or scope state changes in this verification checkpoint.
+
 ```mermaid
 flowchart LR
   C[Captured] --> MP[Merchant pending]

@@ -29,6 +29,8 @@ For ongoing F01 work, also read the [approved capture accounting contract](audit
 
 [B2.4 settlement integration](audits/h1-fix-02-b2-4-settlement-integration.md) adds disconnected candidate generation and recalculated completion using the same capture/allocation evidence. Read its header-first locks, independent asset/release amounts, zero effects, saved-snapshot replay and B3 dispatch/admission dependencies. No runtime route/job consumes the new service, no scope is ACTIVE, and the six legacy F01 reproductions remain red. Do not treat the dormant checkpoint as financial cutover.
 
+[B3.1 integrated verification](audits/h1-fix-02-b3-1-integrated-verification.md) exercises the dormant writers with actual capture transactions and current payouts. Read its admission boundary, legacy reconciliation inventory and lock graph before B3.2 design. Late receipt and exception/payout admission gaps are reproduced; F01/F04 remain open. Test admission and green lifecycle checks do not authorize runtime integration or scope activation.
+
 ## Evidence to preserve
 
 For financial changes, name the invariant and its transaction boundary before coding. Check duplicate execution, failure after remote success, rollback, tenant ownership and conflicting concurrent operations where relevant. Keep tests specific to the risk; a mocked happy path is not evidence for a database race.

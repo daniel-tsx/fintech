@@ -173,6 +173,16 @@ Remove-Item Env:RUN_DB_TESTS
 
 These are direct service tests with test-only dormant admission. Production settlement routes/jobs remain legacy, no scope becomes ACTIVE, and the six opt-in F01 reproductions remain separate red evidence. The suite uses actual dormant refund/dispute methods and two actual WebhookBusinessService capture cases; it does not establish full signed new-policy routing, scheduler/receipt races, real provider settlement or F04 closure.
 
+### B3.1 integrated financial tests
+
+[B3.1](audits/h1-fix-02-b3-1-integrated-verification.md) uses actual capture API/business transactions, dormant refund/dispute/settlement admission fixtures and current payout services. Use a disposable migrated localhost database; set DATABASE_URL as above and RUN_DB_TESTS=1, then run the new suite separately:
+
+```powershell
+pnpm --filter @fintech-lab/api test:integration --runTestsByPath test/integration/integrated-accounting-verification.spec.ts --cacheDirectory ../../.tmp/jest-h1b31
+```
+
+The 44 cases cover all eight accounts, lifecycle attribution, observed cross-writer blocking, rollback/replay and two explicitly reproduced admission gaps. Run the existing eight green financial suites and six opt-in legacy F01 failures separately using the exact commands in the record. Signature/authorization confirmations are fixtures in the new suite; existing signed capture processor tests remain separate. Test overrides do not activate scope or dispatch. PostgreSQL17/hosted CI and live provider/broker execution remain unverified.
+
 ## Offline demo commands
 
 With the API and seeded database running, inspect the fixture and balance:
@@ -255,6 +265,8 @@ On 2026-10-08, defensive function-context review added forward migration 0003 an
 [B2.3.1 prerequisite correction](audits/h1-fix-02-b2-3-dispute-integration.md#b231-independent-review-and-prerequisite-correction) preserves the independent P1 finding: trusted close-before-open must retry before payment-state admission, including during a later pending capture, while untrusted provider relationships still require accounting review. Twelve permanent PostgreSQL cases ran against the old service (5 failed / 7 passed) and then passed after correction. The complete rerun passed **217 cases**, none skipped: 70 dispute plus the unchanged 147 refund/capture/foundation/migration/F02/concurrency cases. Lint/typecheck, 50 unit tests and API/web builds passed; Corepack was rerun with its installed offline cache after a sandbox lookup failure, and the build required a permitted retry after sandbox EPERM. All six F01 assertions were rerun and remain red. Scope activation, migrations, financial policy and legacy runtime dispatch remain unchanged. Tests retain original inbox evidence through service-level prerequisite/rollback and replay; scheduler backoff/dead-letter and full signed dispute routing remain unverified. Exact commands and prior review evidence remain in the checkpoint.
 
 [B2.4 settlement evidence](audits/h1-fix-02-b2-4-settlement-integration.md) records 2026-10-10 implementation from accepted clean `main` at c44b488. Final lint/typecheck, 50 unit tests and API/web builds passed; the build required a permitted retry after sandbox EPERM creating Next output. Eight PostgreSQL suites passed **290 cases**, none skipped: 73 settlement plus all 217 accepted dispute/refund/capture/foundation/migration/F02/concurrency cases. New cases assert actual accounts, candidate estimates/final amounts, source ownership, zero effects, saved replay, rollback, deferred evidence and 22 observed service lock schedules. The six unchanged legacy F01 assertions ran before and after implementation and failed on the same accounting results. No migration, runtime registration, activation or financial policy change occurred. Exact commands, initial assertion/static failures and B3/F01/F04 limits are in the checkpoint; hosted CI/live Stripe/broker/Redis and full signed new-policy dispatch remain unverified.
+
+[B3.1 integrated evidence](audits/h1-fix-02-b3-1-integrated-verification.md) records 2026-10-10 verification from clean accepted `main` at a9321d8. The eight existing PostgreSQL18.6 suites reran **290 green cases**; the separate new actual-capture lifecycle suite passed **44**, none skipped, for **334 permanent green PostgreSQL cases**. The seven ignored ordinary reviewer cases also reran successfully and now have equivalent permanent actual-capture coverage. All six unchanged legacy F01 assertions ran explicitly and remain red. Final lint/typecheck, 50 unit tests and API/web build passed; default tests skipped 340 database cases, executed separately. The build needed a permitted retry after sandbox EPERM. Ten new controlled schedules supplement the 22 settlement schedules. Late receipt during settlement and payout despite OPEN exception are reproduced admission gaps; no runtime source/migration/activation/policy changed. PostgreSQL17 binaries were unavailable, hosted CI/live provider/broker/Redis were not run, and F01/F04 remain open. This checkpoint supplies B3.2 design evidence, not cutover authorization.
 
 ## Remaining verification gaps
 
