@@ -43,6 +43,13 @@
       "when": 1791540000000,
       "tag": "0005_refund_accounting_exception",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792281600000,
+      "tag": "0006_trusted_financial_evidence",
+      "breakpoints": true
     }
   ]
 }

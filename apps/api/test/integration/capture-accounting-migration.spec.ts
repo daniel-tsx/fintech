@@ -50,13 +50,13 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
     for (const entry of journal.entries) copyFileSync(resolve(folder,`${entry.tag}.sql`),resolve(target,`${entry.tag}.sql`));
     return target;
   }
-  it('installs 0000–0005 on an empty database; repeated migrator execution is a no-op', async () => {
+  it('installs 0000–0006 on an empty database; repeated migrator execution is a no-op', async () => {
     const database = await isolated(); await apply(database,folder);
     const before = await fingerprint(database); await apply(database,folder);
     expect(await fingerprint(database)).toEqual(before);
     const [row] = await database.sql`select (select count(*)::integer from drizzle.__drizzle_migrations) as migrations,
       (select count(*)::integer from capture_accounting_lots) as lots,(select count(*)::integer from accounting_exceptions) as exceptions`;
-    expect(row).toMatchObject({migrations:6,lots:0,exceptions:0});
+    expect(row).toMatchObject({migrations:7,lots:0,exceptions:0});
     const functions = await database.sql<{prosecdef:boolean;proconfig:string[]}[]>`select prosecdef,proconfig from pg_proc where pronamespace='public'::regnamespace and proname in
       ('validate_capture_accounting_lot','prepare_capture_allocation_write','check_capture_allocation_bounds','require_accounting_journal','check_capture_allocation_effect','protect_accounting_foundation_evidence','check_accounting_settlement_evidence','protect_allocated_intent_amount')`;
     expect(functions).toHaveLength(8);

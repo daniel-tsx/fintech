@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   check,
+  customType,
   foreignKey,
   index,
   integer,
@@ -255,9 +256,13 @@ export const refundCaptureAllocations = pgTable('refund_capture_allocations', {
   reservedGross: allocationMoney('reserved_gross').notNull(), status: text('status').notNull().default('RESERVED'),
   confirmedGross: allocationMoney('confirmed_gross'), confirmedFee: allocationMoney('confirmed_fee'), journalId: uuid('journal_id'),
   providerEventId: uuid('provider_event_id').references(() => webhookEvents.id), releaseReason: text('release_reason'),
+  evidenceContractVersion: integer('evidence_contract_version').notNull().default(0), proofRevision: integer('proof_revision'),
   policyVersion: text('policy_version').notNull().default('CAPTURE_FIFO_V1'), createdAt: createdAt(),
 }, (t) => [
   uniqueIndex('refund_capture_allocations_refund_id_capture_lot_id_key').on(t.refundId,t.captureLotId), index('refund_allocations_lot').on(t.captureLotId),
+  check('refund_evidence_floor_closed',sql`${t.evidenceContractVersion}=0 and ${t.proofRevision} is null`),
+  index('refund_proof_reference').on(t.providerEventId,t.proofRevision),
+  foreignKey({ columns: [t.providerEventId,t.proofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] }),
   foreignKey({ columns: [t.refundId,t.paymentId,t.merchantId,t.currency], foreignColumns: [refunds.id,refunds.paymentId,refunds.merchantId,refunds.currency] }),
   foreignKey({ columns: [t.captureLotId,t.paymentId,t.merchantId,t.currency], foreignColumns: [captureAccountingLots.id,captureAccountingLots.paymentId,captureAccountingLots.merchantId,captureAccountingLots.currency] }),
   foreignKey({ columns: [t.journalId,t.merchantId,t.currency], foreignColumns: [ledgerTransactions.id,ledgerTransactions.merchantId,ledgerTransactions.currency] }),
@@ -267,9 +272,15 @@ export const disputeCaptureAllocations = pgTable('dispute_capture_allocations', 
   id: uuid('id').primaryKey().defaultRandom(), ...allocationScope(), disputeId: uuid('dispute_id').notNull(), captureLotId: uuid('capture_lot_id').notNull(),
   grossPrincipal: allocationMoney('gross_principal').notNull(), fundedHold: allocationMoney('funded_hold').notNull(), unfundedExposure: allocationMoney('unfunded_exposure').notNull(),
   status: text('status').notNull().default('PLANNED'), outcome: text('outcome'), openJournalId: uuid('open_journal_id'), closeJournalId: uuid('close_journal_id'),
+  evidenceContractVersion: integer('evidence_contract_version').notNull().default(0),
+  openInboxId: uuid('open_inbox_id'), openProofRevision: integer('open_proof_revision'), closeInboxId: uuid('close_inbox_id'), closeProofRevision: integer('close_proof_revision'),
   policyVersion: text('policy_version').notNull().default('CAPTURE_FIFO_V1'), createdAt: createdAt(),
 }, (t) => [
   uniqueIndex('dispute_capture_allocations_dispute_id_capture_lot_id_key').on(t.disputeId,t.captureLotId),
+  check('dispute_evidence_floor_closed',sql`${t.evidenceContractVersion}=0 and ${t.openInboxId} is null and ${t.openProofRevision} is null and ${t.closeInboxId} is null and ${t.closeProofRevision} is null`),
+  index('dispute_open_proof_reference').on(t.openInboxId,t.openProofRevision),index('dispute_close_proof_reference').on(t.closeInboxId,t.closeProofRevision),
+  foreignKey({ columns: [t.openInboxId,t.openProofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] }),
+  foreignKey({ columns: [t.closeInboxId,t.closeProofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] }),
   uniqueIndex('dispute_allocation_effect_scope').on(t.id,t.captureLotId,t.paymentId,t.merchantId,t.currency), index('dispute_allocations_lot').on(t.captureLotId),
   foreignKey({ columns: [t.disputeId,t.paymentId,t.merchantId,t.currency], foreignColumns: [disputes.id,disputes.paymentId,disputes.merchantId,disputes.currency] }),
   foreignKey({ columns: [t.captureLotId,t.paymentId,t.merchantId,t.currency], foreignColumns: [captureAccountingLots.id,captureAccountingLots.paymentId,captureAccountingLots.merchantId,captureAccountingLots.currency] }),
@@ -281,8 +292,11 @@ export const disputeHoldEffects = pgTable('dispute_hold_effects', {
   id: uuid('id').primaryKey().defaultRandom(), ...allocationScope(), allocationId: uuid('allocation_id').notNull(), captureLotId: uuid('capture_lot_id').notNull(),
   effectKey: text('effect_key').notNull(), holdDelta: allocationMoney('hold_delta').notNull(), journalId: uuid('journal_id').notNull(),
   providerEventId: uuid('provider_event_id').notNull().references(() => webhookEvents.id), causeRefundId: uuid('cause_refund_id'), causeDisputeId: uuid('cause_dispute_id'), createdAt: createdAt(),
+  evidenceContractVersion: integer('evidence_contract_version').notNull().default(0), proofRevision: integer('proof_revision'),
 }, (t) => [
   uniqueIndex('dispute_hold_effects_allocation_id_effect_key_key').on(t.allocationId,t.effectKey), uniqueIndex('dispute_hold_effects_journal_id_key').on(t.journalId),
+  check('hold_evidence_floor_closed',sql`${t.evidenceContractVersion}=0 and ${t.proofRevision} is null`), index('hold_proof_reference').on(t.providerEventId,t.proofRevision),
+  foreignKey({ columns: [t.providerEventId,t.proofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] }),
   foreignKey({ columns: [t.allocationId,t.captureLotId,t.paymentId,t.merchantId,t.currency], foreignColumns: [disputeCaptureAllocations.id,disputeCaptureAllocations.captureLotId,disputeCaptureAllocations.paymentId,disputeCaptureAllocations.merchantId,disputeCaptureAllocations.currency] }),
   foreignKey({ columns: [t.causeRefundId,t.paymentId,t.merchantId,t.currency], foreignColumns: [refunds.id,refunds.paymentId,refunds.merchantId,refunds.currency] }),
   foreignKey({ columns: [t.causeDisputeId,t.paymentId,t.merchantId,t.currency], foreignColumns: [disputes.id,disputes.paymentId,disputes.merchantId,disputes.currency] }),
@@ -311,3 +325,69 @@ export const accountingExceptionLots = pgTable('accounting_exception_lots', {
   foreignKey({ columns: [t.exceptionId,t.paymentId,t.merchantId,t.currency], foreignColumns: [accountingExceptions.id,accountingExceptions.paymentId,accountingExceptions.merchantId,accountingExceptions.currency] }),
   foreignKey({ columns: [t.captureLotId,t.paymentId,t.merchantId,t.currency], foreignColumns: [captureAccountingLots.id,captureAccountingLots.paymentId,captureAccountingLots.merchantId,captureAccountingLots.currency] }),
 ]);
+
+// B3.2 B.1: immutable evidence, never runtime financial admission.
+// Migration 0006 owns checked routines, immutable triggers and restricted grants.
+export const financialEvidenceAccounts = pgTable('financial_evidence_accounts', {
+  provider: text('provider').notNull(), providerAccount: text('provider_account').notNull(),
+  runtimeEnforcement: text('runtime_enforcement').notNull().default('UNINSTALLED'), createdAt: createdAt(),
+}, (t) => [primaryKey({columns:[t.provider,t.providerAccount]}),check('financial_evidence_uninstalled',sql`${t.runtimeEnforcement}='UNINSTALLED'`),
+  check('financial_evidence_provider',sql`${t.provider}='STRIPE' and length(${t.providerAccount})>0`)]);
+
+const bytea = customType<{data:Buffer;driverData:Buffer}>({dataType:()=>'bytea'});
+export const providerFinancialReceipts = pgTable('provider_financial_receipts', {
+  inboxId: uuid('inbox_id').primaryKey().references(()=>webhookEvents.id), provider:text('provider').notNull(), providerAccount:text('provider_account').notNull(),
+  rawBody:bytea('raw_body').notNull(),signature:text('signature').notNull(),headers:jsonb('headers').notNull(),normalizedPayload:jsonb('normalized_payload').notNull(),
+  normalizationVersion:integer('normalization_version').notNull(),verificationMethod:text('verification_method').notNull(),verificationVersion:text('verification_version').notNull(),
+  receivedAt:timestamp('received_at',{withTimezone:true}).notNull(),verifiedAt:timestamp('verified_at',{withTimezone:true}).notNull(),
+},(t)=>[index('financial_receipts_account').on(t.provider,t.providerAccount),
+  check('financial_receipt_shape',sql`octet_length(${t.rawBody})>0 and length(${t.signature})>0 and jsonb_typeof(${t.headers})='object' and jsonb_typeof(${t.normalizedPayload})='object'`),
+  check('financial_receipt_contract',sql`${t.normalizationVersion}=1 and ${t.verificationMethod}='STRIPE_SDK' and length(${t.verificationVersion})>0`),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]})]);
+
+export const providerFinancialObservations = pgTable('provider_financial_observations', {
+  id:uuid('id').primaryKey().defaultRandom(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),
+  sourceKind:text('source_kind').notNull(),sourceKey:text('source_key').notNull(),objectKind:text('object_kind').notNull(),providerObjectId:text('provider_object_id').notNull(),
+  paymentId:uuid('payment_id'),merchantId:uuid('merchant_id'),currency:text('currency'),amount:allocationMoney('amount'),
+  outboxId:uuid('outbox_id').references(()=>outboxEvents.id),commandKey:text('command_key'),commandPayload:jsonb('command_payload'),
+  refundId:uuid('refund_id').references(()=>refunds.id),captureAttemptId:uuid('capture_attempt_id').references(()=>paymentAttempts.id),
+  paymentIntentId:text('payment_intent_id'),chargeId:text('charge_id'),providerStatus:text('provider_status').notNull(),snapshot:jsonb('snapshot').notNull(),
+  observedAt:timestamp('observed_at',{withTimezone:true}).notNull(),publisherVersion:text('publisher_version').notNull(),createdAt:createdAt(),
+},(t)=>[uniqueIndex('financial_observation_source').on(t.provider,t.providerAccount,t.sourceKind,t.sourceKey),
+  check('financial_observation_shape',sql`${t.sourceKind} in ('COMMAND_RESULT','PROVIDER_LOOKUP') and ${t.objectKind} in ('REFUND','CAPTURE','DISPUTE') and length(${t.sourceKey})>0 and length(${t.providerObjectId})>0 and jsonb_typeof(${t.snapshot})='object'`),
+  check('financial_observation_command',sql`${t.sourceKind}<>'COMMAND_RESULT' or (${t.paymentId} is not null and ${t.merchantId} is not null and ${t.currency} is not null and ${t.amount} is not null and ${t.outboxId} is not null and ${t.commandKey} is not null and ${t.commandPayload} is not null and ((${t.objectKind}='REFUND' and ${t.refundId} is not null and ${t.captureAttemptId} is null) or (${t.objectKind}='CAPTURE' and ${t.captureAttemptId} is not null and ${t.refundId} is null)))`),
+  index('financial_observations_object').on(t.provider,t.providerAccount,t.objectKind,t.providerObjectId),index('financial_observations_outbox').on(t.outboxId),
+  index('financial_observations_refund').on(t.refundId),index('financial_observations_capture').on(t.captureAttemptId),index('financial_observations_payment').on(t.paymentId,t.merchantId,t.currency),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]}),
+  foreignKey({columns:[t.paymentId,t.merchantId,t.currency],foreignColumns:[payments.id,payments.merchantId,payments.currency]})]);
+
+export const providerFinancialObjectOwners = pgTable('provider_financial_object_owners', {
+  id:uuid('id').primaryKey().defaultRandom(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),
+  objectKind:text('object_kind').notNull(),providerObjectId:text('provider_object_id').notNull(),...allocationScope(),amount:allocationMoney('amount').notNull(),
+  refundId:uuid('refund_id'),providerDisputeId:text('provider_dispute_id'),createdAt:createdAt(),
+},(t)=>[uniqueIndex('financial_object_owner_identity').on(t.provider,t.providerAccount,t.objectKind,t.providerObjectId),
+  check('financial_object_owner_shape',sql`((${t.objectKind}='REFUND' and starts_with(${t.providerObjectId},'re_') and ${t.refundId} is not null and ${t.providerDisputeId} is null) or (${t.objectKind}='DISPUTE' and starts_with(${t.providerObjectId},'dp_') and ${t.providerDisputeId}=${t.providerObjectId} and ${t.refundId} is null)) is true`),
+  uniqueIndex('financial_object_owner_scope').on(t.id,t.paymentId,t.merchantId,t.currency),index('financial_object_owner_payment').on(t.paymentId,t.merchantId,t.currency),index('financial_object_owner_refund').on(t.refundId),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]}),
+  foreignKey({columns:[t.paymentId,t.merchantId,t.currency],foreignColumns:[payments.id,payments.merchantId,payments.currency]}),
+  foreignKey({columns:[t.refundId,t.paymentId,t.merchantId,t.currency],foreignColumns:[refunds.id,refunds.paymentId,refunds.merchantId,refunds.currency]})]);
+
+export const webhookFinancialEvidence = pgTable('webhook_financial_evidence', {
+  inboxId:uuid('inbox_id').primaryKey().references(()=>providerFinancialReceipts.inboxId),proofRevision:integer('proof_revision').notNull(),contractVersion:integer('contract_version').notNull(),
+  ownerBindingId:uuid('owner_binding_id').notNull(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),providerEventId:text('provider_event_id').notNull(),
+  externalType:text('external_type').notNull(),operation:text('operation').notNull(),providerObjectId:text('provider_object_id').notNull(),...allocationScope(),amount:allocationMoney('amount').notNull(),
+  refundId:uuid('refund_id'),providerDisputeId:text('provider_dispute_id'),disputeId:uuid('dispute_id').references(()=>disputes.id),paymentIntentId:text('payment_intent_id').notNull(),
+  chargeId:text('charge_id'),outcome:text('outcome'),refundObservationId:uuid('refund_observation_id').references(()=>providerFinancialObservations.id),captureSources:jsonb('capture_sources').notNull(),
+  attemptRevision:integer('attempt_revision').notNull(),sealedAt:timestamp('sealed_at',{withTimezone:true}).notNull().defaultNow(),validatorVersion:text('validator_version').notNull(),
+},(t)=>[uniqueIndex('financial_proof_owned_tuple').on(t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency),
+  check('financial_proof_contract',sql`${t.proofRevision}=1 and ${t.contractVersion}=1 and ${t.validatorVersion}='B3_2_EVIDENCE_V1' and ${t.attemptRevision}>=0`),
+  check('financial_proof_shape',sql`${t.operation} in ('refund.succeeded','refund.failed','dispute.opened','dispute.closed') and ${t.amount}>0 and ${t.amount}<=9007199254740991 and starts_with(${t.paymentIntentId},'pi_') and jsonb_typeof(${t.captureSources})='array' and jsonb_array_length(${t.captureSources})>0`),
+  index('financial_evidence_binding').on(t.ownerBindingId),index('financial_evidence_refund').on(t.refundId),index('financial_evidence_dispute').on(t.disputeId),index('financial_evidence_observation').on(t.refundObservationId),
+  foreignKey({columns:[t.ownerBindingId,t.paymentId,t.merchantId,t.currency],foreignColumns:[providerFinancialObjectOwners.id,providerFinancialObjectOwners.paymentId,providerFinancialObjectOwners.merchantId,providerFinancialObjectOwners.currency]}),
+  foreignKey({columns:[t.refundId,t.paymentId,t.merchantId,t.currency],foreignColumns:[refunds.id,refunds.paymentId,refunds.merchantId,refunds.currency]})]);
+
+export const financialEvidenceReviews = pgTable('financial_evidence_reviews', {
+  id:uuid('id').primaryKey().defaultRandom(),inboxId:uuid('inbox_id').notNull().references(()=>webhookEvents.id),reviewKey:text('review_key').notNull(),
+  reason:text('reason').notNull(),observations:jsonb('observations').notNull(),createdAt:createdAt(),
+},(t)=>[uniqueIndex('financial_evidence_review_identity').on(t.inboxId,t.reviewKey),
+  check('financial_evidence_review_shape',sql`length(${t.reviewKey})>0 and ${t.reason} in ('UNRESOLVED','CONTRADICTORY','UNSUPPORTED') and jsonb_typeof(${t.observations})='object'`)]);

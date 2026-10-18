@@ -56,9 +56,11 @@ Start with the [project overview](../README.md). Each document below owns its na
 - [H1 Fix 02 B2.3: dispute integration](audits/h1-fix-02-b2-3-dispute-integration.md) — dormant capture-owned holds, win/loss and shared refund/loss hold reductions; isolated transaction/concurrency evidence and remaining runtime cutover requirements.
 - [H1 Fix 02 B2.4: settlement integration](audits/h1-fix-02-b2-4-settlement-integration.md) — dormant capture-owned candidate generation, authoritative completion, independent asset/release effects, zero finalization and historical replay; live cutover/F01/F04 remain open.
 - [H1 Fix 02 B3.1: integrated verification](audits/h1-fix-02-b3-1-integrated-verification.md) — actual capture-to-payout lifecycle evidence, account oracles, controlled cross-writer schedules and explicit receipt/exception/legacy cutover gaps; authorizes no activation.
-- [H1 Fix 02 B3.2 Run A: runtime cutover design](audits/h1-fix-02-b3-2-runtime-cutover-design.md) — proposed admission, policy dispatch, worker fencing, legacy eligibility and verification contract; awaiting human approval, with no implementation or activation.
-- [H1 Fix 02 B3.2 Run A: independent design review](audits/h1-fix-02-b3-2-design-review.md) — acceptance review, required correlation/evidence correction, implementation gates and human decisions; no runtime or activation authorization.
+- [H1 Fix 02 B3.2 Run A: runtime cutover design](audits/h1-fix-02-b3-2-runtime-cutover-design.md) — human-approved design for admission, dispatch, fencing and trusted evidence; implementation staged, with no activation.
+- [H1 Fix 02 B3.2 Run A: independent design review](audits/h1-fix-02-b3-2-design-review.md) — original findings and A.1 acceptance; D01 design-resolved, with implementation gates and no runtime authorization.
 - [H1 Fix 02 B3.2: approved human decisions](audits/h1-fix-02-b3-2-human-decisions.md) — twelve signed-off architecture choices and D01 evidence policy; B.1 schema implementation only is authorized, activation remains prohibited.
+- [H1 Fix 02 B3.2 B.1: trusted evidence schema](audits/h1-fix-02-b3-2-b1-trusted-evidence-schema.md) — immutable receipt/provenance/object ownership and shared SQL proof contract; financial application remains closed pending B.2, with isolated role/migration/concurrency evidence.
+- [H1 Fix 02 B3.2 B.1: independent evidence review](audits/h1-fix-02-b3-2-b1-independent-review.md) — dormant checkpoint acceptance, independently rerun financial/role/migration checks, both receipt/header race orders and explicit B.2 dependencies.
 
 ## Historical material
 
