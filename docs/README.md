@@ -61,6 +61,10 @@ Start with the [project overview](../README.md). Each document below owns its na
 - [H1 Fix 02 B3.2: approved human decisions](audits/h1-fix-02-b3-2-human-decisions.md) — twelve signed-off architecture choices and D01 evidence policy; B.1 schema implementation only is authorized, activation remains prohibited.
 - [H1 Fix 02 B3.2 B.1: trusted evidence schema](audits/h1-fix-02-b3-2-b1-trusted-evidence-schema.md) — immutable receipt/provenance/object ownership and shared SQL proof contract; financial application remains closed pending B.2, with isolated role/migration/concurrency evidence.
 - [H1 Fix 02 B3.2 B.1: independent evidence review](audits/h1-fix-02-b3-2-b1-independent-review.md) — dormant checkpoint acceptance, independently rerun financial/role/migration checks, both receipt/header race orders and explicit B.2 dependencies.
+- [H1 Fix 02 B3.2 B.2-R1: receipt preflight](audits/h1-fix-02-b3-2-b2-r1-trusted-receipt.md) — blocked before implementation: installed B.1 schema lacks the required durable admission lifecycle; receipt-only forward DDL and sealer composition need review.
+- [H1 Fix 02 B3.2 B.2-R0: receipt admission foundation](audits/h1-fix-02-b3-2-b2-r0-admission-foundation.md) — dormant forward obligation/revision schema, restricted SQL lifecycle and receipt-side concurrency evidence; R1 publisher and R2 financial dispatch remain unimplemented.
+- [H1 Fix 02 B3.2 B.2-R0: independent review](audits/h1-fix-02-b3-2-b2-r0-independent-review.md) — changes requested for nonblocking contradictory pending classification; independent PostgreSQL/concurrency/privilege evidence and permanent review regressions.
+- [H1 Fix 02 B3.2 B.2-R0.1: independent re-review](audits/h1-fix-02-b3-2-b2-r0-1-independent-review.md) — dormant checkpoint acceptance after independently reproduced classification correction; preserved pending neutrality, SQL barriers and privileges, with hosted PostgreSQL17 CI still required.
 
 ## Historical material
 

@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   check,
   customType,
   foreignKey,
@@ -14,6 +15,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
 export const userRole = pgEnum('user_role', ['PLATFORM_ADMIN', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR']);
@@ -228,6 +230,7 @@ const allocationScope = () => ({
 export const captureAccountingScopes = pgTable('capture_accounting_scopes', {
   merchantId: uuid('merchant_id').notNull().references(() => merchants.id), currency: text('currency').notNull(),
   status: text('status').notNull().default('FOUNDATION_ONLY'), createdAt: createdAt(),
+  evidenceRevision: allocationMoney('evidence_revision').notNull().default(0n),
 }, (t) => [primaryKey({ columns: [t.merchantId, t.currency] })]);
 
 export const captureAccountingLots = pgTable('capture_accounting_lots', {
@@ -391,3 +394,42 @@ export const financialEvidenceReviews = pgTable('financial_evidence_reviews', {
   reason:text('reason').notNull(),observations:jsonb('observations').notNull(),createdAt:createdAt(),
 },(t)=>[uniqueIndex('financial_evidence_review_identity').on(t.inboxId,t.reviewKey),
   check('financial_evidence_review_shape',sql`length(${t.reviewKey})>0 and ${t.reason} in ('UNRESOLVED','CONTRADICTORY','UNSUPPORTED') and jsonb_typeof(${t.observations})='object'`)]);
+
+// R0 storage declarations. Migration 0007 additionally owns guarded transitions,
+// revisions, deferred obligation checks, capabilities and immutable evidence.
+export const receiptIntakeAuthority = pgTable('receipt_intake_authority', {
+  provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),evidenceRevision:allocationMoney('evidence_revision').notNull().default(0n),
+},t=>[primaryKey({columns:[t.provider,t.providerAccount]}),check('receipt_intake_revision',sql`${t.evidenceRevision}>=0`),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]})]);
+export const receiptAdmissions = pgTable('receipt_admissions', {
+  inboxId:uuid('inbox_id').primaryKey().references(()=>providerFinancialReceipts.inboxId),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),
+  contractVersion:integer('contract_version').notNull(),operation:text('operation').notNull(),financiallyRelevant:boolean('financially_relevant').notNull(),createdAt:createdAt(),
+},t=>[uniqueIndex('receipt_admission_tuple').on(t.inboxId,t.provider,t.providerAccount,t.operation),check('receipt_admission_contract',sql`${t.contractVersion}=1`),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[receiptIntakeAuthority.provider,receiptIntakeAuthority.providerAccount]})]);
+export const receiptAdmissionObligations = pgTable('receipt_admission_obligations', {
+  inboxId:uuid('inbox_id').primaryKey(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),operation:text('operation').notNull(),
+  merchantId:uuid('merchant_id'),currency:text('currency'),paymentId:uuid('payment_id'),proofRevision:integer('proof_revision'),disposition:text('disposition').notNull(),
+  obligationRevision:allocationMoney('obligation_revision').notNull().default(0n),scopeEvidenceRevision:allocationMoney('scope_evidence_revision'),
+  intakeEvidenceRevision:allocationMoney('intake_evidence_revision').notNull(),reviewId:uuid('review_id').references(()=>financialEvidenceReviews.id),resolutionId:uuid('resolution_id'),
+  createdAt:createdAt(),resolvedAt:timestamp('resolved_at',{withTimezone:true}),
+},t=>[check('receipt_obligation_revisions',sql`${t.obligationRevision}>=0 and ${t.intakeEvidenceRevision}>=0`),
+  check('receipt_obligation_disposition',sql`${t.disposition} in ('AWAITING_CONFIRMATION','AWAITING_CORRELATION','AWAITING_APPLICATION','BLOCKING_REVIEW','CLEARED_APPLICATION','CLEARED_NO_EFFECT')`),
+  check('receipt_obligation_owner',sql`((${t.merchantId} is null and ${t.currency} is null and ${t.paymentId} is null and ${t.proofRevision} is null and ${t.scopeEvidenceRevision} is null) or (${t.merchantId} is not null and ${t.currency} is not null and ${t.paymentId} is not null and ${t.proofRevision}=1 and ${t.scopeEvidenceRevision}>=1)) is true`),
+  check('receipt_obligation_scope_state',sql`(${t.disposition} in ('AWAITING_CONFIRMATION','AWAITING_CORRELATION') and ${t.merchantId} is null) or ${t.disposition}='BLOCKING_REVIEW' or (${t.disposition} in ('AWAITING_APPLICATION','CLEARED_APPLICATION','CLEARED_NO_EFFECT') and ${t.merchantId} is not null)`),
+  check('receipt_pending_confirmation',sql`(${t.operation}='refund.pending' and ${t.disposition} in ('AWAITING_CONFIRMATION','BLOCKING_REVIEW')) or (${t.operation}<>'refund.pending' and ${t.disposition}<>'AWAITING_CONFIRMATION')`),
+  check('receipt_obligation_resolution',sql`(${t.disposition} in ('CLEARED_APPLICATION','CLEARED_NO_EFFECT') and ${t.resolvedAt} is not null and ${t.resolutionId} is not null) or (${t.disposition} not in ('CLEARED_APPLICATION','CLEARED_NO_EFFECT') and ${t.resolvedAt} is null and ${t.resolutionId} is null)`),
+  check('receipt_obligation_review',sql`(${t.disposition}='BLOCKING_REVIEW')=(${t.reviewId} is not null)`),
+  index('receipt_unknown_blockers').on(t.provider,t.providerAccount).where(sql`${t.merchantId} is null and ${t.disposition} in ('AWAITING_CORRELATION','BLOCKING_REVIEW')`),
+  index('receipt_scope_blockers').on(t.merchantId,t.currency).where(sql`${t.disposition} in ('AWAITING_APPLICATION','BLOCKING_REVIEW')`),
+  foreignKey({columns:[t.inboxId,t.provider,t.providerAccount,t.operation],foreignColumns:[receiptAdmissions.inboxId,receiptAdmissions.provider,receiptAdmissions.providerAccount,receiptAdmissions.operation]}),
+  foreignKey({columns:[t.merchantId,t.currency],foreignColumns:[captureAccountingScopes.merchantId,captureAccountingScopes.currency]}),
+  foreignKey({columns:[t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency],foreignColumns:[webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency]}),
+  foreignKey({columns:[t.resolutionId,t.inboxId],foreignColumns:[receiptObligationResolutions.id,receiptObligationResolutions.inboxId]})]);
+export const receiptObligationResolutions = pgTable('receipt_obligation_resolutions', {
+  id:uuid('id').primaryKey().defaultRandom(),inboxId:uuid('inbox_id').notNull().references(():AnyPgColumn=>receiptAdmissionObligations.inboxId),kind:text('kind').notNull(),
+  proofRevision:integer('proof_revision').notNull(),paymentId:uuid('payment_id').notNull(),merchantId:uuid('merchant_id').notNull(),currency:text('currency').notNull(),operation:text('operation').notNull(),
+  journalId:uuid('journal_id').references(()=>ledgerTransactions.id),auditId:uuid('audit_id').notNull().references(()=>auditLogs.id),financialReference:jsonb('financial_reference').notNull(),
+  databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull().default(sql`session_user`),createdAt:createdAt(),
+},t=>[uniqueIndex('receipt_resolution_inbox').on(t.inboxId),uniqueIndex('receipt_resolution_tuple').on(t.id,t.inboxId),
+  check('receipt_resolution_kind',sql`${t.kind} in ('APPLICATION','NO_EFFECT')`),check('receipt_resolution_reference',sql`jsonb_typeof(${t.financialReference})='object'`),
+  foreignKey({columns:[t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency],foreignColumns:[webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency]})]);

@@ -63,7 +63,10 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgres://fintech:fintech@localhost:5432/fintech_ci
+      # Administrative fixture access is confined to this disposable service.
+      MIGRATION_ADMIN_URL: postgres://fintech:fintech@localhost:5432/postgres
       RUN_DB_TESTS: '1'
+      RUN_MIGRATION_TESTS: '1'
     steps:
       - uses: actions/checkout@v7
         with:

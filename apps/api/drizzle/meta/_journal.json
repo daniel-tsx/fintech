@@ -50,6 +50,13 @@
       "when": 1792281600000,
       "tag": "0006_trusted_financial_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792307672232,
+      "tag": "0007_receipt_admission_foundation",
+      "breakpoints": true
     }
   ]
 }

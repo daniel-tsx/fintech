@@ -364,14 +364,14 @@ describeDatabase('B2.4 dormant capture settlement transactions (legacy F01 remai
     const f=await capture(Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER),id=await candidate(f);await complete(id);
     await finalEvidence(id,String(Number.MAX_SAFE_INTEGER),0);await balances(f,[0,String(Number.MAX_SAFE_INTEGER),0,0,0,String(Number.MAX_SAFE_INTEGER),0]);
   });
-  it('0000–0006 migrator preserves current finalized, refunded and pending legacy evidence',async()=>{
+  it('0000–0007 migrator preserves current finalized, refunded and pending legacy evidence',async()=>{
     const f=await capture(),id=await candidate(f);await complete(id);await refund(f,5000);
     const zero=await capture();await refund(zero,10000);await complete(await candidate(zero));
     const pending=await capture(),legacy=new SettlementsService(database,ledger,audit);await legacy.generate(pending.merchantId);
     const before=await Promise.all([snapshot(f),snapshot(zero),snapshot(pending)]);
     const client=postgres(process.env.DATABASE_URL!,{max:1});try{await migrate(drizzle(client),{migrationsFolder:resolve(__dirname,'../../drizzle')});}finally{await client.end();}
     expect(await Promise.all([snapshot(f),snapshot(zero),snapshot(pending)])).toEqual(before);
-    const [row]=await database.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`;expect(row.count).toBe(7);
+    const [row]=await database.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`;expect(row.count).toBe(8);
     expect(await complete(id)).toBe('PROCESSED');
   });
 
