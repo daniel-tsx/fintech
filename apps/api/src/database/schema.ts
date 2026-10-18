@@ -433,3 +433,26 @@ export const receiptObligationResolutions = pgTable('receipt_obligation_resoluti
 },t=>[uniqueIndex('receipt_resolution_inbox').on(t.inboxId),uniqueIndex('receipt_resolution_tuple').on(t.id,t.inboxId),
   check('receipt_resolution_kind',sql`${t.kind} in ('APPLICATION','NO_EFFECT')`),check('receipt_resolution_reference',sql`jsonb_typeof(${t.financialReference})='object'`),
   foreignKey({columns:[t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency],foreignColumns:[webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency]})]);
+
+// R0.2 later witnesses are independent of the immutable original enrollment.
+// SQL owns source validation, the exact deferred barrier set and closed recovery.
+export const receiptDeliveryAttempts = pgTable('receipt_delivery_attempts', {
+  id:uuid('id').primaryKey().defaultRandom(),originalInboxId:uuid('original_inbox_id').notNull().references(()=>receiptAdmissions.inboxId),
+  provider:text('provider').notNull(),providerEventId:text('provider_event_id').notNull(),originalAccount:text('original_account').notNull(),providerAccount:text('provider_account').notNull(),
+  deliveryKey:bytea('delivery_key').notNull(),rawBody:bytea('raw_body').notNull(),signature:text('signature').notNull(),headers:jsonb('headers').notNull(),normalizedPayload:jsonb('normalized_payload').notNull(),
+  normalizationVersion:integer('normalization_version').notNull(),verificationMethod:text('verification_method').notNull(),verificationVersion:text('verification_version').notNull(),
+  originalProofRevision:integer('original_proof_revision'),classification:text('classification').notNull(),reason:text('reason').notNull(),operation:text('operation').notNull(),financiallyRelevant:boolean('financially_relevant').notNull(),
+  reviewId:uuid('review_id').references(()=>financialEvidenceReviews.id),receivedAt:timestamp('received_at',{withTimezone:true}).notNull().defaultNow(),
+  databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull().default(sql`session_user`),
+},t=>[uniqueIndex('receipt_delivery_identity').on(t.originalInboxId,t.deliveryKey),
+  foreignKey({columns:[t.provider,t.originalAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]}),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]})]);
+export const receiptDeliveryBarriers = pgTable('receipt_delivery_barriers', {
+  deliveryId:uuid('delivery_id').notNull().references(()=>receiptDeliveryAttempts.id),barrierKey:text('barrier_key').notNull(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),
+  merchantId:uuid('merchant_id'),currency:text('currency'),disposition:text('disposition').notNull().default('BLOCKING_REVIEW'),reviewId:uuid('review_id').notNull().references(()=>financialEvidenceReviews.id),
+  scopeEvidenceRevision:allocationMoney('scope_evidence_revision'),intakeEvidenceRevision:allocationMoney('intake_evidence_revision').notNull(),createdAt:createdAt(),
+},t=>[primaryKey({columns:[t.deliveryId,t.barrierKey]}),check('delivery_barrier_closed',sql`${t.disposition}='BLOCKING_REVIEW'`),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[receiptIntakeAuthority.provider,receiptIntakeAuthority.providerAccount]}),
+  foreignKey({columns:[t.merchantId,t.currency],foreignColumns:[captureAccountingScopes.merchantId,captureAccountingScopes.currency]}),
+  index('receipt_delivery_account_barriers').on(t.provider,t.providerAccount).where(sql`${t.merchantId} is null`),
+  index('receipt_delivery_scope_barriers').on(t.merchantId,t.currency).where(sql`${t.merchantId} is not null`)]);

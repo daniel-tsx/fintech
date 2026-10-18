@@ -57,6 +57,13 @@
       "when": 1792307672232,
       "tag": "0007_receipt_admission_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792320834081,
+      "tag": "0008_conflicting_receipt_deliveries",
+      "breakpoints": true
     }
   ]
 }
