@@ -58,6 +58,7 @@ Start with the [project overview](../README.md). Each document below owns its na
 - [H1 Fix 02 B3.1: integrated verification](audits/h1-fix-02-b3-1-integrated-verification.md) — actual capture-to-payout lifecycle evidence, account oracles, controlled cross-writer schedules and explicit receipt/exception/legacy cutover gaps; authorizes no activation.
 - [H1 Fix 02 B3.2 Run A: runtime cutover design](audits/h1-fix-02-b3-2-runtime-cutover-design.md) — proposed admission, policy dispatch, worker fencing, legacy eligibility and verification contract; awaiting human approval, with no implementation or activation.
 - [H1 Fix 02 B3.2 Run A: independent design review](audits/h1-fix-02-b3-2-design-review.md) — acceptance review, required correlation/evidence correction, implementation gates and human decisions; no runtime or activation authorization.
+- [H1 Fix 02 B3.2: approved human decisions](audits/h1-fix-02-b3-2-human-decisions.md) — twelve signed-off architecture choices and D01 evidence policy; B.1 schema implementation only is authorized, activation remains prohibited.
 
 ## Historical material
 

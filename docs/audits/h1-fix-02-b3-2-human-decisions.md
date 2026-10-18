@@ -1,0 +1,37 @@
+# H1 Fix 02 B3.2 — Human architecture decisions (2026-10-18)
+
+Status: **APPROVED AS DESIGN POLICY; IMPLEMENTATION STAGED; NO RUNTIME ACTIVATION AUTHORIZED.**
+Owner: human engineering decision in ChatGPT session after Run A/A.1 independent design acceptance.
+
+This is the human decision record for the 12 choices in [B3.2 design §20](h1-fix-02-b3-2-runtime-cutover-design.md#20-explicit-decisions-requiring-human-approval), read together with [A.1 correction §21](h1-fix-02-b3-2-runtime-cutover-design.md#21-run-a1-corrective-revision-trusted-correlation-evidence) and [independent acceptance](h1-fix-02-b3-2-design-review.md#14-run-a1-independent-correlation-evidence-acceptance-review). It does not supersede the approved accounting policy or claim executable compatibility.
+
+## Twelve approved decisions
+
+| ID | Human choice and explicit boundary |
+| --- | --- |
+| H01 — Rollout | **Maintenance/drain first**, with a compatible writer floor and selected clean merchant/currency scopes; gradual rollout only after separately reviewed proof and availability need. |
+| H02 — Scope authority | Persist **orthogonal accounting policy and admission mode**, policy/admission epoch, evidence revision and guarded reconciliation certificate. Preserve current evidence classifications. Migration default is legacy/dormant, never ACTIVE. Avoid redundant enums where transactionally derived evidence suffices. |
+| H03 — Receipt cutoff | Use the reviewed **local transaction linearization**: receipt-first known confirmed evidence blocks settlement/payout until applied or reviewed; financial completion-first permits a genuinely later receipt to apply against finalized source. Keep pending-refund **Option A** (no new posted hold, recognized later debt where approved). Provider-created time is not the local lock order. |
+| H04 — Unknown correlation | Use an observable **provider-account-level intake review barrier** when financial relevance is known but ownership cannot be trusted. It blocks new-policy spending/activation across that account until signed/owned evidence resolves it; no timeout-based auto-clear, guessed owner or global quarantine claim. A designated operator must triage with an explicit tracked review deadline and escalation, set per operational runbook. **Legacy admission remains unchanged initially**; applying the broad barrier to legacy money movements requires a separate compatibility review. |
+| H05 — Writer coordination | One **policy-aware dispatcher plus shared financial lock/admission floor** for all new-policy intents, signed callbacks, claims, provider results/mirrors, settlement jobs/manual completion and payouts. Preserve accepted command/provider idempotency keys and recorded policy; never silently fallback to legacy on an active scope. |
+| H06 — Payout protection | New-policy payout reserves only authoritative POSTED merchant/currency available balance under shared admission and blocks on relevant unresolved evidence/OPEN scoped exceptions. On the **compatibility-floor legacy path**, add the conservative scoped exception/evidence guard only after all relevant legacy balance writers coordinate and regressions prove compatibility; do not claim legacy is guarded before then. No new pending-refund hold and no retroactive cancellation of accepted payouts. |
+| H07 — Old-worker fence | Operator-controlled maintenance, drain of all ingress/jobs/consumers/provider in-flight work, plus **separate restricted compatible DB credential**. Retire old credential/restart paths, observe no old sessions/prepared transactions, and prove a restarted old binary cannot write. A new-code-only epoch check is insufficient. Real credential/session changes need separate environment-specific authorization. |
+| H08 — Cohort eligibility | First activation cohort: **fully verified NEW_CAPTURE histories only** with no unfinished legacy commands, payout reservations, candidates, untrusted provider evidence or blocking exceptions. Original-only, misposted, historically adjusted, completed legacy settlement and unsupported ownership histories remain excluded until reviewed reconciliation/compensating evidence. Do not infer or fabricate allocations. |
+| H09 — Candidate recovery | Classify candidates as **retryable**, **blocking-review**, or **terminal/unsupported**, using explicit durable reason and bounded new-batch range admission. Keep unsupported immutable candidates intact. Supersession/exact-ledger repair is separate reviewed work, never a silent rewrite. |
+| H10 — Exception resolution | Require trusted financial effect or explicitly verified no-effect evidence, actor/audit and correct owner/lot/journal provenance before resolving. **Resume is a separate guarded decision** after fresh scope checks. Overlap or unknown provider net effect remains under human-reviewed reconciliation; no invented monetary oracle or auto-clear via a note. |
+| H11 — Activation dependencies | F05/F06 require separately accepted corrections; F04 needs actual active-path competing-writer tests before closure. F01 dormant regressions passing do not close legacy F01. The compatibility boundary begins at the **first new-policy durable intent/candidate**, not only the first posted journal. |
+| H12 — Evidence gates | Independent, committable checkpoints, staged PostgreSQL 18/17 + signed HTTP/Stripe test-mode, RabbitMQ/Redis, CI/hosted and mixed-version/old-worker evidence. No real-money movement required for isolated schema verification. Never label an unexecuted check PASS. External/hosted environments require explicit subsequent authorization. |
+
+## D01 evidence-contract choice (prerequisite to H05)
+
+Adopt **original immutable signed receipt/normalized payload + sealed trusted provider-object correlation proof + one SQL effective-evidence projection**. Application writers and PostgreSQL immediate/deferred validators consume the same proof revision. Trusted command-result/reconciliation observations (D02) must have their own immutable owned source identity and cannot masquerade as signed inbox events. Historical unsupported or unauthenticated ownership (D03) does not acquire authority through migration. Keep migrations 0000–0005 unchanged; a forward migration must be reviewed and regression-tested before any activation.
+
+## Staged implementation authorization
+
+**Authorized now:** B3.2 checkpoint B.1 / A — forward schema, sealed evidence contract, immutable proof/binding and SQL validation, isolated PostgreSQL tests and documentation. Work must remain **dormant and uncommitted until a focused independent review**. Do not change live controllers, schedulers, provider/broker transport, policy routing or payout logic in this checkpoint.
+
+**Not authorized by this decision:** registering new writers, turning any scope ACTIVE, modifying real DB users/sessions, draining a live environment, running a cutover, deploying, real provider/bank effects or claiming F01/F04/F05/F06 closed. Subsequent B.2/B.3/B.4 implementation and B3.3 rehearsal require checkpoint-specific review and authorization.
+
+## Change control and source of truth
+
+If actual SQL/schema reveals an incompatibility with the above choices, pause and report the smallest decision needed rather than silently changing financial policy. Original B3.2 design and independent reviewer history remain preserved. The project engineering session is for implementation runs; accounting fundamentals are studied separately.
