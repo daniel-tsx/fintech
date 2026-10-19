@@ -68,6 +68,8 @@ Start with the [project overview](../README.md). Each document below owns its na
 - [H1 Fix 02 B3.2 B.2-R0.1: independent re-review](audits/h1-fix-02-b3-2-b2-r0-1-independent-review.md) — dormant checkpoint acceptance after independently reproduced classification correction; preserved pending neutrality, SQL barriers and privileges, with hosted PostgreSQL17 CI still required.
 - [H1 Fix 02 B3.2 B.2-R0.2: conflicting delivery foundation](audits/h1-fix-02-b3-2-b2-r0-2-conflicting-delivery.md) — additive immutable later-delivery evidence and checked account/scope barriers, observed by the dormant R0 reader; SDK/HTTP integration and evidence-backed recovery remain separate R1/R2 gates.
 - [H1 Fix 02 B3.2 B.2-R0.2: independent conflicting delivery review](audits/h1-fix-02-b3-2-b2-r0-2-independent-review.md) — dormant checkpoint acceptance after independent PostgreSQL, replay/conflict, atomicity, privilege and controlled concurrency verification; R1/R2 and hosted checks remain separate gates.
+- [H1 Fix 02 B3.2 B.2-R1: isolated signed receipt integration](audits/h1-fix-02-b3-2-b2-r1-signed-receipt-integration.md) — SDK-verified HTTP harness, atomic first admission, retained later-delivery evidence, restricted login capabilities and separate correlation/binding; no live routing, D02 producer, financial application or activation.
+- [H1 Fix 02 B3.2 B.2-R1: independent signed receipt review](audits/h1-fix-02-b3-2-b2-r1-independent-review.md) — dormant checkpoint acceptance after 633 independent PostgreSQL cases, authenticated role/SDK/rollback checks and preserved legacy failures; operational credentials, D02, R2 and hosted validation remain separate gates.
 
 ## Historical material
 
