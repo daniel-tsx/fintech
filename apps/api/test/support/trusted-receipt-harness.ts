@@ -97,7 +97,7 @@ export async function trustedReceiptHarness() {
       try {
         expect((await db.sql`select count(*)::int n from capture_accounting_scopes where status='ACTIVE'`)[0].n).toBe(0);
         expect((await db.sql`select count(*)::int n from financial_evidence_accounts where runtime_enforcement<>'UNINSTALLED'`)[0].n).toBe(0);
-        expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(9);
+        expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(10);
       } finally { for (const app of apps) await app.close(); for (const sql of clients) await sql.end(); await db.onApplicationShutdown(); }
     } };
 }

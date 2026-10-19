@@ -333,6 +333,7 @@ export const accountingExceptionLots = pgTable('accounting_exception_lots', {
 // Migration 0006 owns checked routines, immutable triggers and restricted grants.
 export const financialEvidenceAccounts = pgTable('financial_evidence_accounts', {
   provider: text('provider').notNull(), providerAccount: text('provider_account').notNull(),
+  providerMode: text('provider_mode'),
   runtimeEnforcement: text('runtime_enforcement').notNull().default('UNINSTALLED'), createdAt: createdAt(),
 }, (t) => [primaryKey({columns:[t.provider,t.providerAccount]}),check('financial_evidence_uninstalled',sql`${t.runtimeEnforcement}='UNINSTALLED'`),
   check('financial_evidence_provider',sql`${t.provider}='STRIPE' and length(${t.providerAccount})>0`)]);
@@ -456,3 +457,40 @@ export const receiptDeliveryBarriers = pgTable('receipt_delivery_barriers', {
   foreignKey({columns:[t.merchantId,t.currency],foreignColumns:[captureAccountingScopes.merchantId,captureAccountingScopes.currency]}),
   index('receipt_delivery_account_barriers').on(t.provider,t.providerAccount).where(sql`${t.merchantId} is null`),
   index('receipt_delivery_scope_barriers').on(t.merchantId,t.currency).where(sql`${t.merchantId} is not null`)]);
+
+// D02-A is prospective and dormant. SQL0009 additionally owns publication,
+// identity guards, immutable triggers, exact deferred projections and privileges.
+export const providerCommandAuthorities = pgTable('provider_command_authorities', {
+  outboxId:uuid('outbox_id').primaryKey().references(()=>outboxEvents.id),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),
+  providerMode:text('provider_mode').notNull(),operation:text('operation').notNull(),operationId:uuid('operation_id').notNull(),...allocationScope(),
+  amount:allocationMoney('amount').notNull(),commandKey:text('command_key').notNull(),commandPayload:jsonb('command_payload').notNull(),
+  accountingPolicy:text('accounting_policy').notNull(),acceptanceEpoch:allocationMoney('acceptance_epoch').notNull(),acceptedAt:timestamp('accepted_at',{withTimezone:true}).notNull().defaultNow(),
+},t=>[uniqueIndex('provider_authority_key').on(t.provider,t.providerAccount,t.commandKey),uniqueIndex('provider_authority_operation_unique').on(t.operation,t.operationId),index('provider_authority_operation').on(t.operationId),index('provider_authority_payment').on(t.paymentId),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]}),
+  foreignKey({columns:[t.paymentId,t.merchantId,t.currency],foreignColumns:[payments.id,payments.merchantId,payments.currency]})]);
+export const providerCommandExecutions = pgTable('provider_command_executions', {
+  id:uuid('id').primaryKey(),outboxId:uuid('outbox_id').notNull().references(()=>providerCommandAuthorities.outboxId),
+  preparedAt:timestamp('prepared_at',{withTimezone:true}).notNull().defaultNow(),databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull().default(sql`session_user`),
+},t=>[uniqueIndex('provider_execution_tuple').on(t.id,t.outboxId),index('provider_execution_command').on(t.outboxId,t.preparedAt)]);
+export const providerObservationSources = pgTable('provider_observation_sources', {
+  id:uuid('id').primaryKey().defaultRandom(),sourceOrder:bigint('source_order',{mode:'bigint'}).generatedAlwaysAsIdentity().unique(),
+  outboxId:uuid('outbox_id').notNull().references(()=>providerCommandAuthorities.outboxId),sourceKind:text('source_kind').notNull(),sourceKey:text('source_key').notNull(),
+  executionId:uuid('execution_id'),priorSourceId:uuid('prior_source_id'),lookupObjectId:text('lookup_object_id'),reconciliationRunId:uuid('reconciliation_run_id').references(()=>reconciliationRuns.id),lookupActor:text('lookup_actor'),
+  observationKind:text('observation_kind').notNull(),requestMethod:text('request_method').notNull(),requestPath:text('request_path').notNull(),requestHost:text('request_host').notNull(),requestProtocol:text('request_protocol').notNull(),
+  requestHeaders:jsonb('request_headers').notNull(),requestBody:bytea('request_body').notNull(),requestParameters:jsonb('request_parameters').notNull(),responseBody:bytea('response_body'),bodyCompleteness:text('body_completeness').notNull(),
+  httpStatus:integer('http_status'),responseHeaders:jsonb('response_headers').notNull(),transportError:text('transport_error'),sdkVersion:text('sdk_version').notNull(),normalizationVersion:text('normalization_version').notNull(),normalizedOutcome:jsonb('normalized_outcome').notNull(),
+  observedAt:timestamp('observed_at',{withTimezone:true}).notNull(),fingerprint:bytea('fingerprint').notNull(),createdAt:createdAt(),databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull().default(sql`session_user`),
+},t=>[uniqueIndex('provider_source_fingerprint').on(t.sourceKind,t.sourceKey,t.fingerprint),uniqueIndex('provider_source_tuple').on(t.id,t.outboxId),
+  index('provider_source_command').on(t.outboxId,t.sourceOrder),index('provider_source_prior').on(t.priorSourceId),
+  foreignKey({columns:[t.executionId,t.outboxId],foreignColumns:[providerCommandExecutions.id,providerCommandExecutions.outboxId]}),
+  foreignKey({columns:[t.priorSourceId,t.outboxId],foreignColumns:[t.id,t.outboxId]})]);
+export const providerObservationObligations = pgTable('provider_observation_obligations', {
+  sourceId:uuid('source_id').primaryKey().references(()=>providerObservationSources.id),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),merchantId:uuid('merchant_id'),currency:text('currency'),
+  disposition:text('disposition').notNull(),reason:text('reason').notNull(),scopeEvidenceRevision:allocationMoney('scope_evidence_revision'),intakeEvidenceRevision:allocationMoney('intake_evidence_revision').notNull(),
+},t=>[foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[receiptIntakeAuthority.provider,receiptIntakeAuthority.providerAccount]}),
+  foreignKey({columns:[t.merchantId,t.currency],foreignColumns:[captureAccountingScopes.merchantId,captureAccountingScopes.currency]}),
+  index('provider_unknown_obligations').on(t.provider,t.providerAccount).where(sql`${t.merchantId} is null and ${t.disposition}='BLOCKING_REVIEW'`),
+  index('provider_scoped_obligations').on(t.merchantId,t.currency).where(sql`${t.disposition} in ('AWAITING_APPLICATION','BLOCKING_REVIEW')`)]);
+export const providerObservationProjections = pgTable('provider_observation_projections', {
+  sourceId:uuid('source_id').primaryKey().references(()=>providerObservationSources.id),observationId:uuid('observation_id').notNull().unique().references(()=>providerFinancialObservations.id),
+});
