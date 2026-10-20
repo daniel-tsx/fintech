@@ -1,6 +1,6 @@
 # H1 Fix 02 — B3.2 B.2-R2-A: shared financial application foundation
 
-Current checkpoint: **R2-A.2 ownership correction drafted — BLOCKED_BY_FINANCIAL_OWNERSHIP_CONTRACT**, 2026-10-20. Local PostgreSQL access returned EACCES; corrected database behavior is unverified. See §23 for this run's changes and execution limits. The [independent REQUEST_CHANGES report](h1-fix-02-b3-2-b2-r2-a-independent-review.md) and its four failed ownership regressions remain unchanged. The failed R2-A record, R2-A.1 correction/evidence and §22 review history remain preserved; historical READY wording does not represent acceptance. No shared/production installation, commit, push, activation or R2-B work is authorized.
+Current checkpoint: **APPROVE_DORMANT_R2_A_CHECKPOINT**, 2026-10-20. The [final independent re-review](h1-fix-02-b3-2-b2-r2-a-2-independent-review.md) resolves both original P1 ownership findings and accepts the dormant SQL foundation. Corrected source is already committed in `4b2e2df`; hosted Node 22/24 and PostgreSQL 17 verification passed at `088a945`. See §25 for acceptance/source provenance and remaining boundaries. Original failures, adverse review, corrections and verification recovery in §§1–24 remain preserved. New-policy monetary application stays closed; this acceptance authorizes no shared/production installation, activation or R2-B implementation.
 
 ## Historical R2-A failed run
 
@@ -312,3 +312,97 @@ Next authorized validation must run the unchanged five reviewer cases, all 33 co
 Hosted exact-diff PostgreSQL17/Node22/24, genuine new-policy operation validators, recovery, F05/F06 corrections, common compatible writer floor, D03, operational credential/session fencing, provider/broker/Redis and explicit installation/activation remain separate gates. No commit, push, production migration or activation occurred.
 
 Final non-database checks: **lint, typecheck and API/web build PASS**. Documentation validation passed **57 Markdown files / 843 relative links and anchors**, with CI YAML parsed and structure checked; 19 existing Mermaid blocks were inventoried, not parsed/rendered. `git diff --check` and direct changed-file whitespace/final-newline checks passed. The 317-file starting inventory shows only the four existing deliverables listed above changed, plus the new ownership suite. All other starting files, ten historical migrations, migration metadata, reviewer suite (`eceacfe6e4635958d279c5e406a13d18eb1ceca3e2f555f751a8bf7e7b8e3e17`), independent report, original body through §22 and retained R2-A/A.1/review evidence remain byte-identical. All 40 pre-existing marker contents are unchanged. HEAD is unchanged and the index remains empty. These preservation checks do not inspect or certify database state. Diagnostic logs, failed bootstrap artifacts and validation scripts remain ignored under `.tmp/r2a2-*`.
+
+## 24. R2-A.2 verification environment restoration
+
+Date: **2026-10-20**. Starting checkout: clean `main`, HEAD **088a945f0d1cb30fc07e4ea802dae884f317d81f**; the previous blocked draft had been committed in `4b2e2df` before this run. Inspected AGENTS/CLAUDE, verification, current correction history, package scripts, Compose, existing test setup and the complete empty working/index diff. A new 377-file inventory and 40 saved marker contents protect the starting state. This task changes verification evidence/documentation only; no financial implementation or assertion is edited.
+
+### Confirmed EACCES cause and supported restoration
+
+The old runner explicitly loaded the retained disposable URL on **127.0.0.1:55434**, not Compose's port5432. A plain TCP check inside Codex returned `EACCES` on both5432 and55434, before PostgreSQL authentication or SQL. The identical check through the supported `require_escalated` execution-approval mechanism reached55434, while5432 returned `ECONNREFUSED`. Subsequent approved SQL authenticated successfully and reported **PostgreSQL18.6 on x86_64-windows, MSVC19.44.35228**.
+
+The confirmed55434 failure was **Codex sandbox networking**, not a down PostgreSQL server, invalid credentials, migration SQL, or Docker networking. The repository's Compose service specifies PostgreSQL17 on5432; Docker CLI was not found in the current environment and that separate endpoint was not listening. The existing native disposable server provided verification. No Docker installation, restart, PostgreSQL configuration/pg_hba change, ACL change, live credential change or cluster shutdown was needed. The earlier incomplete bootstrap directories/history were retained.
+
+Approved host execution was requested for the existing SQL/HTTP suites. The ignored `.tmp/r2a2-verify.cjs` runner checks a known loopback test-server URL, creates a new uniquely named database before applying migrations, verifies its identity, exports only that disposable target to the child test process, and retains databases/roles/history. Existing migration fixtures create their own fresh databases. Migration0010 was never applied to the retained review database, a shared application database or production. No denied execution was bypassed.
+
+### Confirmed Jest EPERM cause and supported restoration
+
+The failing operation was `rename(pendingSourceMap, finalSourceMap)` in Jest's `write-file-atomic` transform cache beneath `C:\Users\Daniel\AppData\Local\Packages\sandbox.{...}\AC\Temp\jest\jest-transform-cache-...`. The same error reproduced on a single ledger unit suite with `--no-cache`, before any test executed. Installed Jest29.7.0's `ScriptTransformer` still writes transformed code and source maps with that option.
+
+A diagnostic using newly created files, without Jest or competing writers, reproduced `EPERM` for an atomic rename in the sandbox temporary directory. The same operation succeeded in the ignored workspace `.tmp`; an approved host check also succeeded in ordinary host `%TEMP%`. The sandbox-specific directory was not present in the host namespace. This establishes a **sandbox temporary-filesystem rename restriction**; stale Jest files and concurrent test-process locks are unnecessary to reproduce it. No global Windows rename failure or PostgreSQL filesystem defect was observed. The underlying sandbox implementation/ACL mechanism was not modified or further certified.
+
+The supported correction is the CLI option `--cacheDirectory ../../.tmp/jest-r2a2-verification` (API commands execute from `apps/api`). A separate fresh workspace cache was used for default tests. No cache/source/lockfile deletion, test modification, dependency installation or permanent Jest configuration change occurred. Existing pnpm10.26.0 cache was selected through task-local `COREPACK_HOME` and `COREPACK_ENABLE_NETWORK=0`; secrets were not printed. The [verification owner](../verification.md#windows-sandbox-permissions) now documents these environment procedures.
+
+### Executed results for the unchanged correction
+
+All results below are newly executed against the current correction. Earlier failed R2-A/A.1/independent runs remain historical evidence.
+
+| Check | New result |
+| --- | --- |
+| Original five independent reviewer cases, first priority | **5 passed /0 failed /0 skipped** |
+| Supplemental authoritative ownership suite | **33 passed /0 failed /0 skipped** |
+| R2-A foundation/permit/role/deferred suite | **35 passed /0 failed /0 skipped** |
+| Legacy before/after0009→0010 comparison | **14 passed /0 failed /0 skipped**, including retained baseline42601 comparison |
+| Fresh install/repeat, populated0009 upgrade/fingerprints, original42702 control, rollback and observed DDL wait | **5 passed /0 failed /0 skipped** |
+| Full financial/evidence/admission/migration/concurrency matrix | **828 passed /28 suites /0 failed /0 skipped**, including the original five and all33 supplemental cases;211.982s Jest runtime |
+| Separate unchanged F01 | **6 failed /0 passed /0 skipped**; all names, statuses and complete failure messages exactly equal retained `.tmp/r2a1-f01.json` |
+| Unit-only check with workspace cache | **50 passed /12 suites /0 skipped** |
+| Default API tests with workspace cache | **50 passed /834 database opt-outs /41 discovered suites**; database evidence comes from explicit runs above, not these opt-outs |
+| Lint, post-build typecheck, API/web production build | **PASS** |
+| Web test command | PASS notice only; no browser suite |
+| Documentation/diff/preservation | PASS; final inventory below |
+
+The focused runs cover92 distinct cases and overlap the eventual full matrix; the unit-only/default commands cover the same50 unit cases. Do not add overlapping totals. `--no-cache` alone's initial failed single-suite diagnostic had **0 executed tests**; it is retained in `.tmp/r2a2-verification-unit-no-cache.log`, not reported as a financial failure.
+
+### Committed-state evidence and remaining gates
+
+The unchanged reviewer assertions now observe **P0001**, zero attempted wrong-owner/wrong-currency journals, zero applications and zero inserted invalid items after refusal. Retargeting leaves the existing item's original payment and gross **10000** intact. The passing protected-scope control stays green. These are post-transaction database assertions, not mock outcomes or permission-denial substitutes. An additional read-only transaction against the retained reviewer fixture confirmed zero rejected journals, zero applications and one retained coherent USD item with gross/fee/net **10000/300/9700**; exact fixture UUIDs and values are in `.tmp/r2a2-verification-committed.json`. The33 supplemental cases additionally exercise old references, entry parents, each item owner, absent authority/application at COMMIT and `SET CONSTRAINTS`, source amount/identity refusal and legitimate legacy behavior.
+
+The35 structural cases exercise actual restricted LOGINs, current transaction/backend permits, stale claims/revisions, savepoint/rollback lifecycle, missing application/effects, source dispositions and observed issuer blocking. Their private SQL probe remains nonmonetary and rejects full operation finalization. The14 compatibility cases compare17 table fingerprints across0010 and the same legacy workflows before/after; the migration cases independently retain journal/proof/D02 fingerprints. Successful operation-specific new-policy monetary application is not claimed.
+
+Ignored `.tmp/r2a2-verification-{reviewer,supplemental,foundation,legacy,migration,matrix,f01}.{json,log}` retain exact results, with per-phase database catalogs and private target markers. Phase commands use `node .tmp\r2a2-verify.cjs <phase>` through approved host execution; Jest selections and supported cache option are retained in each log and the runner. Prior evidence filenames/results are not overwritten.
+
+Independent re-review remains required before R2-B. PostgreSQL17/hosted exact-diff Node22/24, external Stripe/broker/Redis, full operation validators, F05/F06, coordinated writer/fence/D03 and explicit installation/activation gates remain separate. No commit, push, production execution, scope activation or R2-B work occurs here.
+
+Final read-only catalogs cover **60 newly created disposable databases**: zero ACTIVE scopes, zero enabled evidence accounts and zero finalized financial applications. The structural fixture's private refusing probe is not a production operation validator. Older retained databases were not audited or cleaned up, and the existing native test server was left running. All test histories and partial bootstrap artifacts were retained.
+
+Exact tracked changes in this restoration: this record's current banner/appended §24, the R2-A navigation entry in `docs/README.md`, and the Windows sandbox guidance in `docs/verification.md`. Migration0010, historical SQL0000–0009, schema/journal, financial writers, all tests (including the five reviewer cases and33 supplements), independent report and previous evidence remain byte-identical. The original record body through §23 is preserved. All40 starting marker contents were restored after retaining the new run's values separately. The377-file inventory has no unexpected changes; HEAD remains088a945 and the index is empty. Documentation validation passed57 Markdown files/850 relative links and anchors plus CI YAML structure;19 unchanged Mermaid blocks were inventoried, not parsed/rendered. Whitespace/final-newline checks and `git diff --check` passed.
+
+**READY_FOR_RE_REVIEW** for the dormant R2-A.2 ownership correction. The unchanged six F01 failures and reconciliation42601 defect remain known legacy issues, not newly corrected behavior or R2-A.2 acceptance failures. Next action: independent re-review of the unchanged SQL/test checkpoint using the new execution evidence. This does not authorize R2-B, installation, financial activation, commit or push.
+
+## 25. Final independent dormant acceptance and hosted source verification
+
+Date: **2026-10-20**. Final independent verdict: **APPROVE_DORMANT_R2_A_CHECKPOINT**, preserved in the [ownership re-review](h1-fix-02-b3-2-b2-r2-a-2-independent-review.md). Both original P1 findings are independently resolved: absent roots cannot conceal protected journal ownership; settlement candidates retain authoritative header/payment/capture/journal ownership and original amounts. The original five reviewer cases, all33 supplements, legacy compatibility, permit/privilege/finality checks, migrations and full828-case matrix pass independently. The original failed implementation, A.1 compatibility correction, REQUEST_CHANGES report, A.2 correction and environment-recovery evidence remain historical records with their actual original outcomes.
+
+### Existing implementation and remote provenance
+
+The financial source correction was already committed in [4b2e2df459652e99e6cd237a651a320b7c278be6](https://github.com/daniel-tsx/fintech/commit/4b2e2df459652e99e6cd237a651a320b7c278be6). Finalization started with local HEAD and freshly fetched `origin/main` both at [088a945f0d1cb30fc07e4ea802dae884f317d81f](https://github.com/daniel-tsx/fintech/commit/088a945f0d1cb30fc07e4ea802dae884f317d81f); the correction is its ancestor. The existing source is not recreated, amended or duplicated.
+
+Migration0010 retains SHA-256 `50c6caee59d6e49a53728a0269733521ee0b31aaccd548428824d3f8916a3c17`. The unchanged five-case reviewer suite retains `eceacfe6e4635958d279c5e406a13d18eb1ceca3e2f555f751a8bf7e7b8e3e17`. Historical SQL0000–0009 remains identical to the accepted parent `449df03`, and the first ten migration-journal entries remain unchanged. Financial writers, registrations, policies, schema and tests are unchanged by documentation finalization.
+
+### Verified hosted evidence
+
+GitHub Actions [run39378314646](https://github.com/daniel-tsx/fintech/actions/runs/39378314646), a completed successful push run for **088a945f0d1cb30fc07e4ea802dae884f317d81f** on `main`, was inspected directly through the GitHub CLI. Both [Node22](https://github.com/daniel-tsx/fintech/actions/runs/39378314646/job/118481365316) and [Node24](https://github.com/daniel-tsx/fintech/actions/runs/39378314646/job/118481365095) jobs passed frozen install, lint, unit/default tests, build and typecheck. The [PostgreSQL job](https://github.com/daniel-tsx/fintech/actions/runs/39378314646/job/118481365323) used the configured `postgres:17-alpine`; its server log identifies **PostgreSQL17.11** and its executed summary is:
+
+```text
+Test Suites: 1 skipped, 28 passed, 28 of 29 total
+Tests:       6 skipped, 828 passed, 834 total
+```
+
+The hosted log explicitly includes passing reviewer, supplemental ownership and migration suites. All financial source/test files at that hosted commit match the committed correction. This is executed PostgreSQL17 evidence for the corrected dormant implementation, not merely a green status on unrelated source. The six skipped hosted cases are the deliberately opt-in historical F01 suite; independent local PostgreSQL18 execution ran all six separately and retained their exact original financial failures. Hosted skips do not establish F01 correctness.
+
+Statements about pending hosted verification in the independent review and earlier sections describe those runs' historical limits. The pinned source's Node22/24/PostgreSQL17 gate is now verified by the run above; documentation-only follow-up CI is separate and its observed status belongs in the final handoff. No new hosted execution is inferred from the old run.
+
+### Accepted boundary and remaining prerequisites
+
+Accepted: the **dormant common SQL foundation**, authoritative ownership refusal, transaction-local permits, bidirectional deferred finality, restricted roles, fresh/populated upgrade preservation and unchanged legacy writer compatibility. Fresh registries/defaults remain closed. Independent post-phase catalogs checked60 new disposable databases with **zero ACTIVE scopes, zero enabled evidence accounts and zero finalized financial applications**. This finalization performs no database mutation or activation and does not recertify older retained databases or production.
+
+Not established: successful new-policy financial application, complete operation-specific validators, live compatible dispatch or runtime cutover. F01's six financial failures, F04 active-path admission, separate F05/F06 corrections and the reconciliation `42601` issue-publication defect remain unresolved. Compatibility includes existing legacy defects; it is not a claim that legacy accounting is repaired.
+
+R2-B requires separate checkpoint authorization and the reviewed pre-lot capture/auth/void/failure proof/classifier/reader and dormant adapter/validator work, preserving the approved attributable-capture proof and monetary policy. Full refund/dispute/settlement/payout validators and typed recovery remain subsequent checkpoints. Coordinated writer/admission floor, F05/F06 acceptance, actual active-path F04 evidence, D03 cohort reconciliation, operational grants/session/restart fencing, provider/broker/Redis evidence and explicit installation/activation approval remain future prerequisites. R2-A acceptance starts none of that work.
+
+### Documentation-only completion inventory
+
+The remaining intended files are exactly `docs/README.md`, this implementation record, `docs/audits/h1-fix-02-b3-2-b2-r2-a-2-independent-review.md` and `docs/verification.md`. They retain the final independent report, recovery guidance and current acceptance/hosted provenance. Temporary reviewers, database files, raw logs, credentials and caches stay ignored. The new documentation commit and normal push are explicitly authorized for this finalization; no implementation or accounting-policy change is included. Documentation links/anchors, CI YAML structure, whitespace, staged inventory and source/history fingerprints are checked before committing.
+
+Executed finalization checks: documentation validation passed **58 Markdown files /870 relative links and anchors**, with CI YAML structure checked and19 unchanged Mermaid blocks inventoried, not parsed/rendered. `git diff --check`, final newlines and trailing whitespace passed. The378-file starting inventory has no unexpected changes; the independent re-review is retained byte-for-byte and the implementation record's existing body through §24 is preserved. All API source/test files match correction4b2e2df. This documentation finalization inspects the independent/hosted evidence above; it does not claim another local financial-suite execution or a fresh production/catalog audit.

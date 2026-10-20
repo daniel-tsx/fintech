@@ -85,6 +85,18 @@ Build precedes standalone typecheck on a fresh checkout because the tracked Next
 
 The web `test` script prints a notice; no automated browser test suite is configured.
 
+### Windows sandbox permissions
+
+Jest may report `EPERM` while atomically renaming transform-cache files inside a Codex sandbox's temporary directory. Use a fresh writable ignored workspace cache for ordinary verification:
+
+```cmd
+pnpm --filter @fintech-lab/api test:unit --cacheDirectory ../../.tmp/jest-local
+```
+
+The same cache option applies to API default and integration commands. In the installed Jest 29.7.0, `--no-cache` still writes transformed code/source maps, so it alone does not resolve this failure. R2-A.2 verification reproduced failed renames in a new sandbox-temp directory and successful renames in `.tmp` and the ordinary host temp directory; no ACL change or cache deletion was needed.
+
+A localhost PostgreSQL connection returning `EACCES` before SQL may also be an execution-sandbox restriction. Compare connectivity through the supported Codex execution-approval mechanism before changing database configuration. The R2-A.2 restoration reached its native disposable PostgreSQL 18 server only with approved host execution; Compose's separate port 5432 was not listening. Database/HTTP integration tests still require the disposable local admin setup below. This does not authorize migration of a shared database or bypassing a denied execution request.
+
 ## Database integration tests
 
 With a disposable database already migrated (override `DATABASE_URL` if needed):
@@ -286,12 +298,14 @@ New HTTP tests run their own raw-body Nest application on loopback; SDK signatur
 
 Final R1 preservation checks confirm all nine historical migrations, schema/journal, existing runtime/tests and previous audit records are byte-preserved; only six current documentation owners and six new deliverables differ from the clean baseline. Read-only catalogs checked89 isolated databases (77 with0008): zero ACTIVE scopes/enabled accounts and all financial proof gates closed. Documentation validation passed48 Markdown files/596 relative links and anchors, plus CI YAML structure;19 existing Mermaid blocks were extracted, without parser/render execution. `git diff --check` and all twelve deliverables' newline/trailing-whitespace checks passed. No staging/commit/push occurred; temporary artifacts remain ignored and financial histories retained.
 
+[R2-A final dormant acceptance](audits/h1-fix-02-b3-2-b2-r2-a-financial-application-foundation.md#25-final-independent-dormant-acceptance-and-hosted-source-verification) records the independent APPROVE_DORMANT_R2_A_CHECKPOINT verdict and directly inspected [hosted run39378314646](https://github.com/daniel-tsx/fintech/actions/runs/39378314646) at source commit `088a945`, which includes correction `4b2e2df`. Node22 and24 checks passed; PostgreSQL17.11 passed **828 cases /28 suites**, with the six historical F01 cases intentionally skipped in hosted CI. Independent local PostgreSQL18 ran those six separately and preserved their baseline failures. Dormant foundation acceptance does not open operation-specific financial application, repair F01/F04/F05/F06 or resolve the known reconciliation42601 defect. Earlier hosted-not-run statements remain the evidence boundaries of their original runs; this pinned hosted result does not verify future runtime/cutover changes.
+
 ## Remaining verification gaps
 
 - Live Stripe calls, test-account multicapture availability, customer authentication and webhook forwarding.
 - Live RabbitMQ publisher confirms, crash/redelivery behavior, reconnects and DLQ replay; Redis/BullMQ scheduling.
 - Complete authorization matrix, account currency/ownership semantics, stale inbox leases, all out-of-order success/failure combinations, settlement races, payout versus refund/dispute races. The F02 journal/header sealing cases are covered separately by the [fix record](audits/h1-fix-01-posted-ledger-immutability.md).
 - Provider settlement/report ingestion, real payouts, automated financial repair and missing-reference discovery.
-- Automated browser accessibility/responsive regression coverage and hosted CI results.
+- Automated browser accessibility/responsive regression coverage and hosted evidence for future runtime/cutover changes beyond the pinned R2-A source run above.
 
 These gaps are follow-up audits, not claims of failed financial invariants or an invitation to change semantics during repository polish.
