@@ -43,7 +43,7 @@ This is a portfolio/reference payment platform. Financial correctness takes prio
 
 ## Agent Workflow & Skill Routing
 
-Use skills conditionally and in proportion to the task. Load only the relevant entry point and supporting references as needed; prefer one primary skill per activity, adding another only for distinct value. This routing governs activation over broader upstream triggers. Repository safety rules, financial invariants and task-specific review requirements take precedence over code-minimalism heuristics. This section owns shared routing; [AI workflow](docs/AI_WORKFLOW.md) owns the existing work loop and payment review questions.
+Use skills conditionally and in proportion to the task. Load only the relevant entry point and supporting references as needed; prefer one primary skill per activity, adding another only for distinct value. This routing and explicit user requests determine activation; upstream "always", "any task" or session-wide language does not extend activation to unrelated activities. Once selected, follow the skill's procedure and confirmation gates. Repository safety rules, financial invariants and task-specific review requirements take precedence over code-minimalism heuristics. This section owns shared routing; [AI workflow](docs/AI_WORKFLOW.md) owns the existing work loop and payment review questions.
 
 For vendored skills, load the repository copy from `.agents/skills/<name>/SKILL.md` in Codex or `.claude/skills/<name>/SKILL.md` in Claude Code. Same-name global skills can coexist or take precedence in a host's selector; read the local file explicitly when necessary. Do not combine competing versions. Codex uses `$skill-name`; Claude Code uses `/skill-name`.
 
@@ -58,6 +58,8 @@ For vendored skills, load the repository copy from `.agents/skills/<name>/SKILL.
 Skill provenance, synchronization and discovery checks are documented in [AI workflow](docs/AI_WORKFLOW.md#portable-agent-skills).
 
 ## Frontend Skill Routing
+
+The two frontend skills below are optional environment-provided capabilities. Use them only when available; otherwise follow existing conventions and use available verification tools, reporting material verification gaps. Do not install or vendor them automatically.
 
 ### React and Next.js
 
@@ -86,4 +88,4 @@ Do not invoke multiple overlapping skills without a concrete reason. Reuse exist
 
 ## Finish
 
-Run relevant scripts from [verification](docs/verification.md). Update the owning document when behavior changes; keep the index and links current. Report changed files, executed checks, failures, unverified boundaries, assumptions and next steps. Do not commit or push unless the task calls for it.
+Run relevant scripts from [verification](docs/verification.md). Before completing a task, assess whether architecture, API contracts, database schemas, business behavior or operational procedures changed; update the owning document when needed and keep the index and links current. Avoid documentation churn for trivial implementation details. Report changed files, executed checks, failures, unverified boundaries, assumptions and next steps. Do not commit or push unless the task calls for it.

@@ -212,7 +212,7 @@ For failure simulation run `pnpm --filter @fintech-lab/api test:unit` and use th
 
 [CI](../.github/workflows/ci.yml) runs on pushes, pull requests and manual dispatch:
 
-- Node 22/24 jobs: frozen install, lint, unit/default tests, build, typecheck.
+- Node 22/24 jobs: `node scripts/sync-agent-skills.mjs --check` before dependency installation, then frozen install, lint, unit/default tests, build, typecheck.
 - Node 24 integration job: fresh PostgreSQL 17 service container, frozen install, migrations and integration suite with `RUN_DB_TESTS=1`, `RUN_MIGRATION_TESTS=1` and `MIGRATION_ADMIN_URL` pointing only to that service. Its fixture admin can create databases/roles; publisher/worker assertions use restricted non-owner roles. Suites close connections and retain immutable fixture history locally; CI service disposal removes the job's isolated databases/roles. No seed, Redis or RabbitMQ is needed.
 
 Jobs have read-only repository permissions and use no repository/service secrets. The workflow follows the official [PostgreSQL service-container guide](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers) and [pnpm action setup](https://github.com/pnpm/action-setup).

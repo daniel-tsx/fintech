@@ -32,6 +32,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           package-manager-cache: false
+      - name: Check agent skill synchronization
+        run: node scripts/sync-agent-skills.mjs --check
       - uses: pnpm/action-setup@v6
         with:
           cache: true
