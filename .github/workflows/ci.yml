@@ -39,6 +39,7 @@ jobs:
           cache: true
           run_install: false
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:verification
       - run: pnpm lint
       - run: pnpm test
       # next-env.d.ts references generated route types on a fresh checkout.
@@ -84,4 +85,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:migrate
       # Services are constructed directly: no Redis, RabbitMQ, seed or Stripe calls.
-      - run: pnpm --filter @fintech-lab/api test:integration
+      - run: pnpm test:integration

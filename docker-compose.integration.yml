@@ -1,0 +1,6 @@
+# Applied only by the isolated verification runner; development defaults stay unchanged.
+# !override requires Docker Compose >=2.24.4 and removes the fixed development port.
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1::5432"

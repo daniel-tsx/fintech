@@ -97,6 +97,43 @@ The same cache option applies to API default and integration commands. In the in
 
 A localhost PostgreSQL connection returning `EACCES` before SQL may also be an execution-sandbox restriction. Compare connectivity through the supported Codex execution-approval mechanism before changing database configuration. The R2-A.2 restoration reached its native disposable PostgreSQL 18 server only with approved host execution; Compose's separate port 5432 was not listening. Database/HTTP integration tests still require the disposable local admin setup below. This does not authorize migration of a shared database or bypassing a denied execution request.
 
+## Risk-based verification
+
+Choose verification with the task's invariant during planning, then review the resulting evidence before completion.
+
+| Change | Required evidence |
+| --- | --- |
+| Migrations, PostgreSQL queries/transactions/locks or durable financial effects | Focused unit checks plus the relevant real PostgreSQL integration/migration cases in an isolated Docker database |
+| Redis/BullMQ, message brokers or interactions between runtime services | Focused unit checks plus Docker-backed integration across the affected real boundary |
+| UI, documentation or pure logic sufficiently covered by units | Relevant static/unit/browser checks; Docker is optional |
+
+Report each planned command as **PASS**, **FAIL** or **NOT RUN**, including scope, passed/failed/skipped counts where available, and the reason for failure or omission. A configured CI job, healthy container or mocked adapter is not a passing integration test. If Docker/Compose or approved host access is unavailable, report NOT RUN and continue unrelated work; do not claim the affected integration risk is closed.
+
+### Isolated Docker PostgreSQL command
+
+From the repository root, with dependencies installed and Docker running:
+
+```cmd
+pnpm test:verification
+pnpm test:integration:docker
+```
+
+`test:verification` runs regression checks for the runner's isolation (including the existing dotenv loader), failure handling and evidence reporting; it does not start Docker. `test:integration:docker` reuses [development Compose](../docker-compose.yml) with a [verification-only port override](../docker-compose.integration.yml). The override requires [Compose 2.24.4+](https://docs.docker.com/reference/compose-file/merge/#replace-value). Development ports/volumes remain unchanged.
+
+The runner generates a fresh `fintech-verify-<UUID>` project, starts only PostgreSQL on a dynamically allocated **127.0.0.1** port, and rejects shared/external volumes, bind mounts and explicit container names. It overrides inherited database/admin URLs with the run's disposable fixture URLs and neutralizes inherited dotenv file/override/vault settings using a run-owned empty file. It enables database/migration tests, runs existing `pnpm db:migrate` followed by `pnpm test:integration`, and saves Jest JSON/cache under ignored `.tmp/<project>/`. The root `test:integration` command delegates to the existing API script; existing Jest options and native database commands below remain available.
+
+Normal completion, failed startup/migrations/tests, and handled interruption attempt `compose down --volumes` for **that generated project only**. Cleanup failure is FAIL even if tests passed. Docker/Compose unavailability is NOT RUN with nonzero exit status; zero executed tests cannot produce PASS. If forcibly killed or cleanup fails, use the printed project ID to retry only its cleanup from this repository:
+
+```cmd
+docker compose -p fintech-verify-<UUID> -f docker-compose.yml -f docker-compose.integration.yml down --volumes
+```
+
+Use only the ID printed by that test run. Never point this command at a development project, attach an existing volume, run the runner against an existing database, or use global `docker system/volume/container prune`. Test database histories are retained within their run until the run-owned volume is removed; no development or production history is deleted. No workers, external reconciliation or real provider consumers are started, and provider credentials are fixed test placeholders.
+
+This command covers the existing **PostgreSQL** suite. It does not verify Redis/BullMQ or RabbitMQ application boundaries: those are currently mocked, and Compose supplies no broker. Changes to those boundaries require targeted integration tests with isolated services; report NOT RUN with the missing coverage until such checks exist. A Redis PING or broker startup alone is not application integration evidence. Extend the existing suite/Compose conventions only when a task needs that coverage, without starting workers that could call a real PSP.
+
+CI retains its job-owned PostgreSQL service container and uses the same `pnpm db:migrate` / `pnpm test:integration` commands. Do not start a second Compose stack inside that job. Its existing conservative integration gate remains unchanged for all pushes/PRs; risk-based local verification does not remove that gate.
+
 ## Database integration tests
 
 With a disposable database already migrated (override `DATABASE_URL` if needed):
@@ -224,8 +261,8 @@ For failure simulation run `pnpm --filter @fintech-lab/api test:unit` and use th
 
 [CI](../.github/workflows/ci.yml) runs on pushes, pull requests and manual dispatch:
 
-- Node 22/24 jobs: `node scripts/sync-agent-skills.mjs --check` before dependency installation, then frozen install, lint, unit/default tests, build, typecheck.
-- Node 24 integration job: fresh PostgreSQL 17 service container, frozen install, migrations and integration suite with `RUN_DB_TESTS=1`, `RUN_MIGRATION_TESTS=1` and `MIGRATION_ADMIN_URL` pointing only to that service. Its fixture admin can create databases/roles; publisher/worker assertions use restricted non-owner roles. Suites close connections and retain immutable fixture history locally; CI service disposal removes the job's isolated databases/roles. No seed, Redis or RabbitMQ is needed.
+- Node 22/24 jobs: `node scripts/sync-agent-skills.mjs --check` before dependency installation, then frozen install, `pnpm test:verification`, lint, unit/default tests, build, typecheck.
+- Node 24 integration job: fresh PostgreSQL 17 service container, frozen install, `pnpm db:migrate` and `pnpm test:integration` with `RUN_DB_TESTS=1`, `RUN_MIGRATION_TESTS=1` and `MIGRATION_ADMIN_URL` pointing only to that service. Its fixture admin can create databases/roles; publisher/worker assertions use restricted non-owner roles. Suites close connections and retain immutable fixture history locally; CI service disposal removes the job's isolated databases/roles. No seed, Redis or RabbitMQ is needed.
 
 Jobs have read-only repository permissions and use no repository/service secrets. The workflow follows the official [PostgreSQL service-container guide](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers) and [pnpm action setup](https://github.com/pnpm/action-setup).
 
@@ -299,6 +336,19 @@ New HTTP tests run their own raw-body Nest application on loopback; SDK signatur
 Final R1 preservation checks confirm all nine historical migrations, schema/journal, existing runtime/tests and previous audit records are byte-preserved; only six current documentation owners and six new deliverables differ from the clean baseline. Read-only catalogs checked89 isolated databases (77 with0008): zero ACTIVE scopes/enabled accounts and all financial proof gates closed. Documentation validation passed48 Markdown files/596 relative links and anchors, plus CI YAML structure;19 existing Mermaid blocks were extracted, without parser/render execution. `git diff --check` and all twelve deliverables' newline/trailing-whitespace checks passed. No staging/commit/push occurred; temporary artifacts remain ignored and financial histories retained.
 
 [R2-A final dormant acceptance](audits/h1-fix-02-b3-2-b2-r2-a-financial-application-foundation.md#25-final-independent-dormant-acceptance-and-hosted-source-verification) records the independent APPROVE_DORMANT_R2_A_CHECKPOINT verdict and directly inspected [hosted run39378314646](https://github.com/daniel-tsx/fintech/actions/runs/39378314646) at source commit `088a945`, which includes correction `4b2e2df`. Node22 and24 checks passed; PostgreSQL17.11 passed **828 cases /28 suites**, with the six historical F01 cases intentionally skipped in hosted CI. Independent local PostgreSQL18 ran those six separately and preserved their baseline failures. Dormant foundation acceptance does not open operation-specific financial application, repair F01/F04/F05/F06 or resolve the known reconciliation42601 defect. Earlier hosted-not-run statements remain the evidence boundaries of their original runs; this pinned hosted result does not verify future runtime/cutover changes.
+
+### Risk-based Docker verification (2026-10-20)
+
+Executed on Windows with Node 24.19.0, pnpm 10.26.0, Docker Engine 29.9.1 and Compose 5.6.0. Docker access required approved host execution; the sandbox alone could not reach the engine.
+
+| Check | Result |
+| --- | --- |
+| `pnpm test:verification` | **PASS** — 10 runner regressions, including unavailable Docker, unsafe resources, failure cleanup, zero-test rejection and protection against inherited dotenv overrides using the installed loader |
+| `pnpm test:integration:docker` | **PASS** — fresh PostgreSQL 17 migration chain, 28 suites / 828 tests passed; the 6 historical F01 cases remain intentionally skipped. Final Jest evidence: `.tmp/fintech-verify-f1efa1c2-5431-4ba9-bd94-8e985816d7bd/jest.json` |
+| Run-owned cleanup | **PASS** — both executed test projects left no containers, volumes or networks. The five pre-existing volumes and existing custom network remained present; there were no existing containers |
+| Exact network-ID inventory comparison | **FAIL** — Docker's built-in `bridge` ID changed after the baseline; other existing network IDs remained. The cause was not established, so unchanged whole-engine network identity is not claimed |
+| Node syntax, CI YAML/preserved service and gates, skill synchronization, diff whitespace | **PASS** — financial rules, Claude import, seven vendored skills, development Compose and application/dependency files preserved; independent review found no remaining findings |
+| Hosted CI for this change, Node 22 execution, real interruption handling, Redis/BullMQ and RabbitMQ integration | **NOT RUN** — local Node 24 verification only; no relevant live service tests currently exist for Redis/broker boundaries. Failure handling is covered by runner regressions; actual signal interruption was not exercised |
 
 ## Remaining verification gaps
 
