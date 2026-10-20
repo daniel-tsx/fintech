@@ -41,6 +41,49 @@ This is a portfolio/reference payment platform. Financial correctness takes prio
 - Documentation claims must point to implementation or executed checks. Separate implemented, inspected, tested and externally verified.
 - No fabricated users, metrics, testimonials, compliance claims or readiness guarantees. License choice belongs to the owner.
 
+## Agent Workflow & Skill Routing
+
+Use skills conditionally and in proportion to the task. Load only the relevant entry point and supporting references as needed; prefer one primary skill per activity, adding another only for distinct value. This routing governs activation over broader upstream triggers. Repository safety rules, financial invariants and task-specific review requirements take precedence over code-minimalism heuristics. This section owns shared routing; [AI workflow](docs/AI_WORKFLOW.md) owns the existing work loop and payment review questions.
+
+For vendored skills, load the repository copy from `.agents/skills/<name>/SKILL.md` in Codex or `.claude/skills/<name>/SKILL.md` in Claude Code. Same-name global skills can coexist or take precedence in a host's selector; read the local file explicitly when necessary. Do not combine competing versions. Codex uses `$skill-name`; Claude Code uses `/skill-name`.
+
+- **Planning:** Inspect the repository and relevant documentation first. For complex, ambiguous or high-risk tasks, use `grilling` when important design decisions or trade-offs remain unresolved. Ask focused questions with recommendations; discover facts independently. Record agreed decisions and acceptance criteria in the task's owning document or plan. Obtain approval before implementing unresolved high-risk decisions. Skip grilling and unnecessary planning for trivial or well-specified tasks. `grill-me` remains an explicit interview entry point; once an interview begins, follow its confirmation gate.
+- **Implementation:** For non-trivial code changes, apply `ponytail`. Reuse existing components, utilities, services and conventions; choose the smallest complete implementation without speculative abstractions or unnecessary dependencies. Preserve correctness, security, validation, error handling and domain invariants. Check affected callers and integrations; add focused tests for meaningful new logic. Its session mode does not make trivial tasks require extra ceremony.
+- **Debugging:** Use `systematic-debugging` when non-trivial bugs, recurring failures, unexpected behavior or difficult test failures require investigation: reproduce, gather evidence, test hypotheses, then verify the root-cause fix with a regression. Skip it for trivial fixes with an established cause.
+- **Database work:** Use `supabase-postgres-best-practices` for PostgreSQL queries, indexes, schema design, transactions, concurrency, locking, connections or performance. Read only relevant rules, apply PostgreSQL-general guidance, and never assume Supabase infrastructure or APIs. Preserve the financial/database invariants above.
+- **Review:** For non-trivial changes, apply `ponytail-review` as an additional quality review, alongside applicable domain-specific review skills and the existing payment checklist. Trace the complete affected flow, including correctness, regressions, security, concurrency, performance, tests and unnecessary complexity. Prefer an independent reviewer or isolated review context when available. Report concrete findings before fixing them; the review itself changes no code.
+- **Audit:** Use `ponytail-audit` for explicit repository-wide audits or major audit tasks. Do not run a whole-repository audit for each implementation.
+- **Verification:** Run relevant tests, lint, type checks and project-specific checks from [verification](docs/verification.md). Resolve blocking findings and report unverified boundaries. Record valuable engineering lessons in existing owning documents or established casebook conventions; do not create a parallel record by default.
+
+Skill provenance, synchronization and discovery checks are documented in [AI workflow](docs/AI_WORKFLOW.md#portable-agent-skills).
+
+## Frontend Skill Routing
+
+### React and Next.js
+
+Use `vercel-react-best-practices` for non-trivial React or Next.js tasks involving component behavior, data fetching, rendering, performance, or refactoring.
+
+Load only relevant guidance. Skip for trivial styling or content changes.
+
+### Browser Verification
+
+Use `agent-browser` when browser interaction provides meaningful verification of a web-facing change.
+
+Prioritize:
+
+- Critical user journeys
+- Interactive UI behavior
+- Responsive layout and visual regressions
+- Bug fixes requiring browser reproduction
+
+Prefer local or isolated test environments. Do not access or modify production data without authorization.
+
+Do not run browser automation for backend-only, documentation-only, or otherwise irrelevant tasks.
+
+### Efficiency
+
+Do not invoke multiple overlapping skills without a concrete reason. Reuse existing verification evidence when it is fresh and sufficient.
+
 ## Finish
 
 Run relevant scripts from [verification](docs/verification.md). Update the owning document when behavior changes; keep the index and links current. Report changed files, executed checks, failures, unverified boundaries, assumptions and next steps. Do not commit or push unless the task calls for it.
