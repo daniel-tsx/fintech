@@ -32,8 +32,8 @@ class FixtureResponse extends Stripe.HttpClientResponse {
   toJSON(): never { throw new Error('Observation wrapper must consume original bytes'); }
 }
 
-export async function providerObservationHarness() {
-  const h = await trustedReceiptHarness(), role = `d02_pub_${randomUUID().replaceAll('-', '')}`, password = randomBytes(32).toString('hex');
+export async function providerObservationHarness(migrationsFolder?: string) {
+  const h = await trustedReceiptHarness(migrationsFolder), role = `d02_pub_${randomUUID().replaceAll('-', '')}`, password = randomBytes(32).toString('hex');
   await h.db.sql.unsafe(`create role "${role}" login password '${password}' noinherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls`);
   await h.db.sql.unsafe(`grant usage on schema public to "${role}"`);
   await h.db.sql.unsafe(`grant select on provider_command_authorities,provider_command_executions,provider_observation_sources,reconciliation_runs to "${role}"`);

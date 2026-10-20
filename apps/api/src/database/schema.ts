@@ -494,3 +494,70 @@ export const providerObservationObligations = pgTable('provider_observation_obli
 export const providerObservationProjections = pgTable('provider_observation_projections', {
   sourceId:uuid('source_id').primaryKey().references(()=>providerObservationSources.id),observationId:uuid('observation_id').notNull().unique().references(()=>providerFinancialObservations.id),
 });
+
+// R2-A is dormant. Forward SQL owns the typed alternatives, protected registry,
+// immutable manifests, transaction authority, grants and deferred finality.
+const xid8 = customType<{ data: string }>({ dataType: () => 'xid8' });
+const regprocedure = customType<{ data: string }>({ dataType: () => 'regprocedure' });
+export const financialApplicationContracts = pgTable('financial_application_contracts', {
+  family: text('family').notNull(), phase: text('phase').notNull(), policy: text('policy').notNull(), version: integer('version').notNull(),
+  prepareFunction: regprocedure('prepare_function').notNull(), validateFunction: regprocedure('validate_function').notNull(),
+}, t => [primaryKey({ columns: [t.family,t.phase,t.policy] })]);
+export const financialApplicationScopeAuthority = pgTable('financial_application_scope_authority', {
+  merchantId: uuid('merchant_id').notNull(), currency: text('currency').notNull(), provider: text('provider').notNull(), providerAccount: text('provider_account').notNull(),
+  policy: text('policy').notNull(), epoch: allocationMoney('epoch').notNull(), admissionMode: text('admission_mode').notNull(),
+}, t => [primaryKey({ columns: [t.merchantId,t.currency] }),
+  foreignKey({ columns: [t.merchantId,t.currency], foreignColumns: [captureAccountingScopes.merchantId,captureAccountingScopes.currency] }),
+  foreignKey({ columns: [t.provider,t.providerAccount], foreignColumns: [financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount] })]);
+export const financialApplicationRoots = pgTable('financial_application_roots', {
+  id: uuid('id').primaryKey().defaultRandom(), family: text('family').notNull(), operationId: uuid('operation_id').notNull(), phase: text('phase').notNull(),
+  merchantId: uuid('merchant_id').notNull(), currency: text('currency').notNull(), provider: text('provider').notNull(), providerAccount: text('provider_account').notNull(),
+  policy: text('policy').notNull(), acceptanceEpoch: allocationMoney('acceptance_epoch').notNull(),
+  acceptedOutboxId: uuid('accepted_outbox_id').references(() => providerCommandAuthorities.outboxId),
+  paymentId: uuid('payment_id'), attemptId: uuid('attempt_id'), refundId: uuid('refund_id'), disputeId: uuid('dispute_id'), settlementId: uuid('settlement_id'), payoutId: uuid('payout_id'),
+  createdAt: createdAt(),
+}, t => [uniqueIndex('application_canonical_identity').on(t.family,t.operationId,t.phase,t.currency),
+  uniqueIndex('application_root_scope').on(t.id,t.merchantId,t.currency),
+  foreignKey({ columns: [t.paymentId,t.merchantId,t.currency], foreignColumns: [payments.id,payments.merchantId,payments.currency] }),
+  foreignKey({ columns: [t.attemptId,t.paymentId,t.merchantId,t.currency], foreignColumns: [paymentAttempts.id,paymentAttempts.paymentId,paymentAttempts.merchantId,paymentAttempts.currency] }),
+  foreignKey({ columns: [t.refundId,t.paymentId,t.merchantId,t.currency], foreignColumns: [refunds.id,refunds.paymentId,refunds.merchantId,refunds.currency] }),
+  foreignKey({ columns: [t.disputeId,t.paymentId,t.merchantId,t.currency], foreignColumns: [disputes.id,disputes.paymentId,disputes.merchantId,disputes.currency] })]);
+export const financialApplicationManifests = pgTable('financial_application_manifests', {
+  id: uuid('id').primaryKey().defaultRandom(), rootId: uuid('root_id').notNull().references(() => financialApplicationRoots.id),
+  transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(),
+  inboxId: uuid('inbox_id').notNull(), proofRevision: integer('proof_revision').notNull(), proofOperation: text('proof_operation').notNull(), claimGeneration: integer('claim_generation').notNull(),
+  merchantId: uuid('merchant_id').notNull(), currency: text('currency').notNull(), paymentId: uuid('payment_id').notNull(),
+  policy: text('policy').notNull(), epoch: allocationMoney('epoch').notNull(), scopeRevision: allocationMoney('scope_revision').notNull(), intakeRevision: allocationMoney('intake_revision').notNull(),
+  contractVersion: integer('contract_version').notNull(), result: text('result').notNull(), sourceManifest: jsonb('source_manifest').notNull(), effectManifest: jsonb('effect_manifest').notNull(), createdAt: createdAt(),
+}, t => [uniqueIndex('application_manifest_transaction').on(t.transactionId,t.backendPid), uniqueIndex('application_manifest_root').on(t.id,t.rootId),
+  foreignKey({ columns: [t.rootId,t.merchantId,t.currency], foreignColumns: [financialApplicationRoots.id,financialApplicationRoots.merchantId,financialApplicationRoots.currency] }),
+  foreignKey({ columns: [t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] })]);
+export const financialApplicationPermits = pgTable('financial_application_permits', {
+  transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(), manifestId: uuid('manifest_id').notNull().unique().references(() => financialApplicationManifests.id),
+  databasePrincipal: customType<{ data: string }>({ dataType: () => 'name' })('database_principal').notNull().default(sql`session_user`),
+}, t => [primaryKey({ columns: [t.transactionId,t.backendPid] })]);
+export const financialApplications = pgTable('financial_applications', {
+  rootId: uuid('root_id').primaryKey().references(() => financialApplicationRoots.id), manifestId: uuid('manifest_id').notNull().unique(),
+  result: text('result').notNull(), auditId: uuid('audit_id').notNull().unique().references(() => auditLogs.id), createdAt: createdAt(),
+}, t => [foreignKey({ columns: [t.manifestId,t.rootId], foreignColumns: [financialApplicationManifests.id,financialApplicationManifests.rootId] })]);
+export const financialApplicationDispositions = pgTable('financial_application_dispositions', {
+  id: uuid('id').primaryKey().defaultRandom(), rootId: uuid('root_id').notNull().references(() => financialApplications.rootId),
+  inboxId: uuid('inbox_id').references(() => receiptAdmissionObligations.inboxId), obligationRevision: allocationMoney('obligation_revision'),
+  observationSourceId: uuid('observation_source_id').references(() => providerObservationObligations.sourceId), deliveryId: uuid('delivery_id'), barrierKey: text('barrier_key'),
+  disposition: text('disposition').notNull(), createdAt: createdAt(),
+}, t => [uniqueIndex('application_receipt_disposition').on(t.inboxId,t.obligationRevision), uniqueIndex('application_observation_disposition').on(t.observationSourceId),
+  uniqueIndex('application_delivery_disposition').on(t.deliveryId,t.barrierKey),
+  foreignKey({ columns: [t.deliveryId,t.barrierKey], foreignColumns: [receiptDeliveryBarriers.deliveryId,receiptDeliveryBarriers.barrierKey] })]);
+export const financialApplicationRevisionEffects = pgTable('financial_application_revision_effects', {
+  manifestId: uuid('manifest_id').primaryKey().references(() => financialApplicationManifests.id), rootId: uuid('root_id').notNull().references(() => financialApplications.rootId),
+  priorRevision: allocationMoney('prior_revision').notNull(), finalRevision: allocationMoney('final_revision').notNull(),
+});
+export const financialApplicationEffectLinks = pgTable('financial_application_effect_links', {
+  manifestId: uuid('manifest_id').notNull(), rootId: uuid('root_id').notNull(), relationName: text('relation_name').notNull(), effectId: uuid('effect_id').notNull(),
+  merchantId: uuid('merchant_id').notNull(), currency: text('currency').notNull(), paymentId: uuid('payment_id').notNull(),
+  journalId: uuid('journal_id').unique().references(() => ledgerTransactions.id), lotId: uuid('lot_id').references(() => captureAccountingLots.id),
+  refundAllocationId: uuid('refund_allocation_id').references(() => refundCaptureAllocations.id), disputeAllocationId: uuid('dispute_allocation_id').references(() => disputeCaptureAllocations.id),
+  holdEffectId: uuid('hold_effect_id').references(() => disputeHoldEffects.id), settlementItemId: uuid('settlement_item_id').references(() => settlementItems.id),
+}, t => [primaryKey({ columns: [t.manifestId,t.relationName,t.effectId] }),
+  foreignKey({ columns: [t.manifestId,t.rootId], foreignColumns: [financialApplicationManifests.id,financialApplicationManifests.rootId] }),
+  foreignKey({ columns: [t.rootId,t.merchantId,t.currency], foreignColumns: [financialApplicationRoots.id,financialApplicationRoots.merchantId,financialApplicationRoots.currency] })]);

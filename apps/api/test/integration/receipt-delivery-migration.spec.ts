@@ -67,12 +67,12 @@ describeMigration('R0.2 additive delivery migration', () => {
   }
   afterAll(async () => { for (const db of clients) await db.onApplicationShutdown(); });
 
-  it('fresh ten-migration chain and repeated install create no delivery, barriers or activation', async () => {
+  it('fresh eleven-migration chain and repeated install create no delivery, barriers or activation', async () => {
     const db = await isolated(); await apply(db); const before = await fingerprint(db); await apply(db);
     expect(await fingerprint(db)).toEqual(before);
     expect((await db.sql`select (select count(*)::int from drizzle.__drizzle_migrations) as migrations,
       (select count(*)::int from receipt_delivery_attempts) as attempts,(select count(*)::int from receipt_delivery_barriers) as barriers,
-      (select count(*)::int from capture_accounting_scopes where status='ACTIVE') as active`)[0]).toEqual({ migrations: 10, attempts: 0, barriers: 0, active: 0 });
+      (select count(*)::int from capture_accounting_scopes where status='ACTIVE') as active`)[0]).toEqual({ migrations: 11, attempts: 0, barriers: 0, active: 0 });
   }, 30000);
   it('populated 0007 upgrade preserves original financial and nonfinancial admission/proof/review evidence', async () => {
     const db = await isolated(); await apply(db, staged(8)); const h = await history(db), before = await fingerprint(db);

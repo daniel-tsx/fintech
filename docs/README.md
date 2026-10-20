@@ -47,6 +47,8 @@ Start with the [project overview](../README.md). Each document below owns its na
 
 ## Audit evidence
 
+- [H1 Fix 02 B3.2 B.2-R2-A / A.1 / A.2: shared financial application foundation](audits/h1-fix-02-b3-2-b2-r2-a-financial-application-foundation.md) — ownership correction drafted; BLOCKED_BY_FINANCIAL_OWNERSHIP_CONTRACT because PostgreSQL access is restricted. Original history, reviewer regressions and REQUEST_CHANGES preserved; independent re-review required before R2-B, with no installation or activation authorized.
+- [H1 Fix 02 B3.2 B.2-R2-A: independent foundation review](audits/h1-fix-02-b3-2-b2-r2-a-independent-review.md) — REQUEST_CHANGES: two P1 ownership defects, four retained failing regressions, exact SQL predicates and corrective checkpoint; interrupted authorization experiments not resumed, implementation and fixtures unchanged.
 - [H1 financial correctness audit](audits/h1-financial-correctness.md) — historical findings for the audited revision, with follow-up links.
 - [H1 Fix 01: posted ledger immutability](audits/h1-fix-01-posted-ledger-immutability.md) — F02 implementation, migration considerations and regression evidence. Current accounting/database behavior remains owned by Ledger and Database design above.
 - [H1 Fix 02: settlement accounting design](audits/h1-fix-02-settlement-design.md) — approved Approach A / pending-refund Option A contract and regression matrix, preserving original Run A evidence; runtime integration remains planned.

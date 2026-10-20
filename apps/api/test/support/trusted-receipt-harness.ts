@@ -28,7 +28,7 @@ class TestReceiptController {
   }
 }
 
-export async function trustedReceiptHarness() {
+export async function trustedReceiptHarness(migrationsFolder = resolve(__dirname, '../../drizzle')) {
   const value = process.env.MIGRATION_ADMIN_URL;
   if (!value) throw new Error('Disposable MIGRATION_ADMIN_URL required');
   const url = new URL(value);
@@ -37,7 +37,7 @@ export async function trustedReceiptHarness() {
   try { await admin.unsafe(`create database "${name}"`); } finally { await admin.end(); }
   url.pathname = '/' + name;
   const setup = postgres(url.toString(), { max: 1 });
-  try { await migrate(drizzle(setup), { migrationsFolder: resolve(__dirname, '../../drizzle') }); } finally { await setup.end(); }
+  try { await migrate(drizzle(setup), { migrationsFolder }); } finally { await setup.end(); }
   const db = new DatabaseService(new ConfigService({ DATABASE_URL: url.toString() }));
   const roles = { publisher: `r1_pub_${suffix}`, correlator: `r1_cor_${suffix}`, worker: `r1_worker_${suffix}` };
   const clients: Sql[] = [], apps: INestApplication[] = [];
@@ -97,7 +97,7 @@ export async function trustedReceiptHarness() {
       try {
         expect((await db.sql`select count(*)::int n from capture_accounting_scopes where status='ACTIVE'`)[0].n).toBe(0);
         expect((await db.sql`select count(*)::int n from financial_evidence_accounts where runtime_enforcement<>'UNINSTALLED'`)[0].n).toBe(0);
-        expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(10);
+        expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(11);
       } finally { for (const app of apps) await app.close(); for (const sql of clients) await sql.end(); await db.onApplicationShutdown(); }
     } };
 }
