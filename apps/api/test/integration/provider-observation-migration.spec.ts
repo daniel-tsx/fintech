@@ -21,9 +21,9 @@ describeDb('D02-A fresh install and conservative 0008 upgrade', () => {
     return { db, apply: async (source = folder) => { const sql = postgres(url.toString(), { max: 1 }); try { await migrate(drizzle(sql), { migrationsFolder: source }); } finally { await sql.end(); } } };
   }
   afterAll(async () => { for (const db of databases) await db.onApplicationShutdown(); });
-  it('installs eleven migrations, narrow NOLOGIN owners and pinned definers with no PUBLIC publication capability', async () => {
+  it('installs twelve migrations, narrow NOLOGIN owners and pinned definers with no PUBLIC publication capability', async () => {
     const { db, apply } = await isolated(); await apply(); await apply();
-    expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(11);
+    expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(12);
     const owners = await db.sql<{ rolname: string }[]>`select rolname,rolcanlogin,rolinherit,rolsuper,rolcreaterole,rolcreatedb,rolbypassrls from pg_roles where rolname='fintech_observation_'||md5(current_database())`;
     expect(owners).toHaveLength(1);
     expect(owners[0]).toMatchObject({ rolcanlogin: false, rolinherit: false, rolsuper: false, rolcreaterole: false, rolcreatedb: false, rolbypassrls: false });

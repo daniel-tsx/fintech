@@ -38,9 +38,9 @@ describeDb('R2-A additive migration compatibility', () => {
     for (const table of tables) result[table] = (await sql.unsafe(`select md5(coalesce(string_agg(j,'|' order by j),'')) hash from (select to_jsonb(t)::text j from public.${table} t) s`))[0].hash;
     return result;
   }
-  it('fresh repeatable eleven-migration install leaves every contract and enrollment closed', async () => {
+  it('fresh repeatable twelve-migration install leaves every contract and enrollment closed', async () => {
     const { h, apply } = await setup(); await apply();
-    expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(11);
+    expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(12);
     for (const table of ['financial_application_contracts','financial_application_scope_authority','financial_application_roots','financial_application_manifests','financial_application_permits','financial_applications','financial_application_dispositions','financial_application_effect_links','financial_application_revision_effects'])
       expect(await h.db.sql.unsafe(`select 1 from public.${table}`)).toHaveLength(0);
     const functions = await h.db.sql`select p.proname,p.proconfig from pg_proc p where p.pronamespace='public'::regnamespace

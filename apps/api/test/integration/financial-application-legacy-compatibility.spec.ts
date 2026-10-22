@@ -98,19 +98,28 @@ describeDb('R2-A.1 same legacy writers before and after the additive0009 upgrade
     if (phase === '0009') baseline.set(name, result);
     else { expect(baseline.has(name)).toBe(true); expect(result).toEqual(baseline.get(name)); }
   }
-  describe.each(['0009', '0010'])('schema %s', phase => {
+  describe.each(['0009', '0010', '0011'])('schema %s', phase => {
     beforeAll(async () => {
-      if (phase === '0010') {
+      if (phase !== '0009') {
+        let source = folder;
+        if (phase === '0010') {
+          source = resolve(__dirname, `../../../../.tmp/r2b1-legacy-through10-${randomUUID()}`);
+          mkdirSync(resolve(source, 'meta'), { recursive: true });
+          const journal = JSON.parse(readFileSync(resolve(folder, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
+          journal.entries = journal.entries.filter(e => e.idx < 11);
+          writeFileSync(resolve(source, 'meta/_journal.json'), JSON.stringify(journal));
+          for (const e of journal.entries) copyFileSync(resolve(folder, e.tag + '.sql'), resolve(source, e.tag + '.sql'));
+        }
         const before = await fingerprint(), url = new URL(process.env.MIGRATION_ADMIN_URL!);
         url.pathname = '/' + String((await h.db.sql`select current_database() n`)[0].n); const sql = postgres(url.toString(), { max: 1 });
-        try { await migrate(drizzle(sql), { migrationsFolder: folder }); } finally { await sql.end(); }
+        try { await migrate(drizzle(sql), { migrationsFolder: source }); } finally { await sql.end(); }
         expect(await fingerprint()).toEqual(before);
       }
-      expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(phase === '0009' ? 10 : 11);
+      expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(phase === '0009' ? 10 : phase === '0010' ? 11 : 12);
     }, 30000);
     afterAll(async () => {
       expect((await h.db.sql`select count(*)::int n from capture_accounting_scopes where status='ACTIVE'`)[0].n).toBe(0);
-      if (phase === '0010') for (const table of ['financial_application_scope_authority','financial_application_contracts','financial_application_roots','financial_application_permits','financial_applications','financial_application_dispositions'])
+      if (phase !== '0009') for (const table of ['financial_application_scope_authority','financial_application_contracts','financial_application_roots','financial_application_permits','financial_applications','financial_application_dispositions'])
         expect(await h.db.sql.unsafe(`select 1 from public.${table}`)).toHaveLength(0);
     });
     it('authorization/capture, signed inbox, mirrors, idempotency and original lots retain their behavior', async () => {

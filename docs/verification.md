@@ -350,6 +350,39 @@ Executed on Windows with Node 24.19.0, pnpm 10.26.0, Docker Engine 29.9.1 and Co
 | Node syntax, CI YAML/preserved service and gates, skill synchronization, diff whitespace | **PASS** — financial rules, Claude import, seven vendored skills, development Compose and application/dependency files preserved; independent review found no remaining findings |
 | Hosted CI for this change, Node 22 execution, real interruption handling, Redis/BullMQ and RabbitMQ integration | **NOT RUN** — local Node 24 verification only; no relevant live service tests currently exist for Redis/broker boundaries. Failure handling is covered by runner regressions; actual signal interruption was not exercised |
 
+### R2-B1 pre-lot evidence (2026-10-20)
+
+[B1 implementation record](audits/h1-fix-02-b3-2-b2-r2-b1-payment-operation-evidence.md) records the dormant0011 evidence/classifier/reader/binding checkpoint. The final `pnpm test:integration:docker` run passed **895 cases /30 suites**, with the six unchanged historical F01 cases intentionally skipped there. A separate fresh Docker run executed those six and retained their expected financial assertion failures. The60-case focused proof/migration matrix is included in895, not additional coverage. Existing50 unit tests, API/web lint/typecheck/build, ten verification-runner regressions and documentation checks passed. All SQL0000–0010 and both approved design documents retain their starting bytes.
+
+Tests use genuine SDK transport/signature fixtures and authenticated restricted LOGINs in fresh run-owned PostgreSQL17 Docker resources. They inspect zero-effect proof state, source/owner/amount refusal, immutable/versioned history, rollback, both publication/sealing/binding race orders, populated upgrades and DDL waits. No actual Stripe API, provider consumer, production dispatch, financial application, scope activation or deployed credential/fence was exercised. Hosted CI, Node22, native PostgreSQL18 and external broker/Redis/provider evidence remain NOT RUN for this diff. Exact commands, initial failures/corrections, artifact paths, preservation and review priorities are in the record.
+
+### R2-B1.1 source consistency correction (2026-10-21)
+
+The [B1.1 correction record](audits/h1-fix-02-b3-2-b2-r2-b1-1-contradictory-evidence-correction.md) preserves the independent four-failure baseline and records corrected SQL, unchanged reviewer results, supplemental committed-state tests and current execution limitations. Final PostgreSQL17.11 execution passed **932 cases /32 passing suites**, with six intentional F01 skips; separate F01 execution preserved all six exact historical financial failures. The final focused run passed97 cases with zero skips, including all nine unchanged reviewer cases and28 supplements; these97 overlap the932. Final lint/typecheck and50 units pass. The recursive build failed with sandbox EPERM creating Next.js output and was stopped without a permission workaround. All nine runner cleanup commands passed; an optional independent Docker inventory script was blocked by PowerShell execution policy and stopped without bypass. This correction adds no financial writer or activation; the original B1 result above remains historical evidence.
+
+### R2-B1.2 independent findings correction (2026-10-21)
+
+The appended [B1.2 correction section](audits/h1-fix-02-b3-2-b2-r2-b1-1-contradictory-evidence-correction.md#r2-b12-independent-review-findings-correction) records the unchanged reviewer baseline, exact three findings, new SQLSTATE/committed-state coverage and final verification. PostgreSQL17.11 passed **965 cases /34 passing suites**, with six intentional F01 skips; separate execution retained their exact six financial failures. Both unchanged reviewer suites pass9/9, and24 new acceptance cases pass. The130-case focused run overlaps the965. Units50, lint, typecheck, API/web build, documentation and diff checks pass. All nine run-owned projects were cleaned; direct label-filtered inventory found no remaining resources. This appends to preserved B1/B1.1 history and independent adverse verdicts; it does not verify external provider availability or authorize B2/activation.
+
+### R2-B1 finalization (2026-10-22)
+
+The [final independent acceptance](audits/h1-fix-02-b3-2-b2-r2-b1-1-contradictory-evidence-correction.md#final-independent-dormant-acceptance-2026-10-22) accepts the dormant B1/B1.1/B1.2 foundation. Finalization independently matched the approved source fingerprints, both unchanged nine-case reviewer suites, all eleven historical SQL files and the original eleven migration-journal entries. Migration0011 remains SHA-256 `84a88d8cf8118211b29adf8bd5e3bc419b3a39d57c22e8febfad514cd9d4cec5`; finalization changes no SQL semantics or financial/runtime handler.
+
+Fresh checks use Node24.19.0, pinned pnpm10.26.0 and run-owned disposable Docker PostgreSQL17.11 databases, with the repository runner's isolated ports, credentials, dotenv and cleanup. The ignored selection helper reuses that runner without changing installation or isolation behavior. No shared/production database or real provider/consumer is used.
+
+| Command / scope | Fresh finalization result |
+| --- | --- |
+| `node .tmp/b1-finalize-verify.mjs full` (unchanged `pnpm test:integration:docker` selection) | **PASS:965 tests /34 passing suites /0 failures /6 intentional F01 skips**. Includes B1 evidence56/migration4, reviewer9+9, B1.1 supplements28, B1.2 acceptance24, R1/D02, R2-A ownership/permits,21 legacy comparisons and the full historical financial matrix |
+| `node .tmp/b1-finalize-verify.mjs focused` | **PASS:130 tests /6 suites /0 failures /0 skips**, overlapping the full run; both reviewer suites remain byte-identical |
+| `node .tmp/b1-finalize-verify.mjs f01`, RUN_F01_PENDING=1 | **Expected FAIL:0 passed /6 historical financial failures /0 skips**, separately executed; exact names/statuses/financial assertion messages match the accepted original baseline |
+| `pnpm --filter @fintech-lab/api test:unit --cacheDirectory ../../.tmp/jest-b1-finalize-unit --json --outputFile ../../.tmp/b1-finalize-unit.json` | **PASS:50 tests /12 suites /0 failures /0 skips** |
+| `pnpm lint`; `pnpm build`; post-build `pnpm typecheck` | **PASS:API and web**, using the existing pinned Corepack cache |
+| `pnpm test:verification`; `node scripts/sync-agent-skills.mjs --check` | **PASS:ten runner safeguards and synchronized vendored skills** |
+| Documentation links/anchors and CI YAML; `git diff --check`; approved-source/history preservation | **PASS:64 Markdown files /1,107 relative links and anchors /0 errors**;19 existing Mermaid blocks inventoried, not rendered;393 source/history files byte-preserved, with only three documentation files updated during finalization |
+| B1 committed fixture state and run-owned cleanup | **PASS:**zero ACTIVE scopes, contracts, enrollments, applications, permits, dispositions, journals and lots in both full/focused B1 summaries; direct Docker label inventory reports zero containers/volumes/networks for all three finalization projects |
+
+Hosted verification must be checked against the exact published source commit, including Node22/24, PostgreSQL17 installation of0011 and both permanent reviewer suites. It is distinct from these local results; the publication handoff supplies its run URL, SHA and confirmed status. B2 accounting, source clearance and financial scope activation remain closed. Existing F01 defects, unsupported subsequent shared-PI captures, real provider delivery/entitlement and deployed operational boundaries remain separate.
+
 ## Remaining verification gaps
 
 - Live Stripe calls, test-account multicapture availability, customer authentication and webhook forwarding.

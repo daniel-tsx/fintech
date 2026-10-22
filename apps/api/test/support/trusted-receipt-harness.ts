@@ -17,7 +17,7 @@ import { RestrictedReceiptDatabase, type ReceiptTransactions } from '../../src/w
 import { TrustedReceiptCorrelationService } from '../../src/webhooks/trusted-receipt-correlation.service';
 import { TrustedSignedReceiptService, type SignedReceiptResult } from '../../src/webhooks/trusted-signed-receipt.service';
 
-interface ReceiptHttpBody extends Partial<SignedReceiptResult> { error?: { code: string } }
+export interface ReceiptHttpBody extends Partial<SignedReceiptResult> { error?: { code: string } }
 
 @Controller('isolated-receipts')
 class TestReceiptController {
@@ -97,7 +97,7 @@ export async function trustedReceiptHarness(migrationsFolder = resolve(__dirname
       try {
         expect((await db.sql`select count(*)::int n from capture_accounting_scopes where status='ACTIVE'`)[0].n).toBe(0);
         expect((await db.sql`select count(*)::int n from financial_evidence_accounts where runtime_enforcement<>'UNINSTALLED'`)[0].n).toBe(0);
-        expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(11);
+        expect((await db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(12);
       } finally { for (const app of apps) await app.close(); for (const sql of clients) await sql.end(); await db.onApplicationShutdown(); }
     } };
 }

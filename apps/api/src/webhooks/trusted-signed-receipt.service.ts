@@ -53,7 +53,9 @@ export class TrustedSignedReceiptService {
         values('STRIPE',${event.id},${normalized.type},${signature},${tx.json(normalized as never)},${tx.json(retainedHeaders)})
         on conflict(provider,provider_event_id) do nothing returning id`;
       if (inserted) {
-        await tx`select public.publish_admitted_receipt(${inserted.id},${this.endpoint.account},${raw},${this.verifier})`;
+        if (this.endpoint.admissionContract === 'PAYMENT_OPERATION_V2') {
+          await tx`select public.publish_admitted_payment_receipt(${inserted.id},${this.endpoint.account},${raw},${this.verifier})`;
+        } else await tx`select public.publish_admitted_receipt(${inserted.id},${this.endpoint.account},${raw},${this.verifier})`;
         return { id: inserted.id, duplicate: false, classification: 'ORIGINAL' };
       }
       // A separate READ COMMITTED statement sees the winner after the unique

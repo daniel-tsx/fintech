@@ -46,12 +46,12 @@ describeMigration('B3.2 B.1 forward migration and closed financial floor',()=>{
     const payload={id:`evt_${randomUUID()}`,type:'refund.succeeded',data:{merchantId:f.merchantId,paymentId:f.paymentId,refundId:refund.id,amount:5000,currency:'USD',providerTransactionId:`re_${refund.id}`,paymentIntentId:`pi_${f.paymentId}`}};
     const [inbox]=await db.sql<{id:string}[]>`insert into webhook_events (provider,provider_event_id,event_type,signature,payload,status) values ('STRIPE',${payload.id},'refund.succeeded','historical-fixture',${db.sql.json(payload)},'PENDING') returning id`;
     await db.transaction(tx=>service.applySucceeded(tx,inbox.id));return {...f,refundId:refund.id,inboxId:inbox.id};}
-  it('fresh eleven-migration chain installs zero evidence/active scopes; repeated migration is a no-op',async()=>{
+  it('fresh twelve-migration chain installs zero evidence/active scopes; repeated migration is a no-op',async()=>{
     const db=await isolated();await apply(db);const before=await originals(db);await apply(db);expect(await originals(db)).toEqual(before);
     const [r]=await db.sql`select (select count(*)::integer from drizzle.__drizzle_migrations) as migrations,
       (select count(*)::integer from provider_financial_receipts) as receipts,(select count(*)::integer from webhook_financial_evidence) as proofs,
       (select count(*)::integer from financial_evidence_accounts) as accounts,(select count(*)::integer from capture_accounting_scopes where status='ACTIVE') as active`;
-    expect(r).toEqual({migrations:11,receipts:0,proofs:0,accounts:0,active:0});await expect(db.sql`select public.assert_financial_evidence_runtime_ready()`).rejects.toThrow(/UNINSTALLED/);
+    expect(r).toEqual({migrations:12,receipts:0,proofs:0,accounts:0,active:0});await expect(db.sql`select public.assert_financial_evidence_runtime_ready()`).rejects.toThrow(/UNINSTALLED/);
   },30000);
   it('populated 0005 upgrade preserves finalized financial history and unapplied historical receipt without manufacturing trust',async()=>{
     const db=await isolated();await apply(db,stagedFolder(6));const f=await legacy(db);
@@ -93,7 +93,7 @@ describeMigration('B3.2 B.1 forward migration and closed financial floor',()=>{
     try{await Promise.race([started,held]);const waiter=(await migration<{pid:number}[]>`select pg_backend_pid() as pid`)[0].pid;installing=migrate(drizzle(migration),{migrationsFolder:folder});
       let blocked=false;for(let i=0;i<150;i++){const [r]=await db.sql<{blocked:boolean}[]>`select ${blocker}=any(pg_blocking_pids(${waiter})) as blocked`;if(r.blocked){blocked=true;break;}await delay(20);}expect(blocked).toBe(true);
       expect((await db.sql`select to_regclass('public.webhook_financial_evidence') as proof`)[0].proof).toBeNull();release();await Promise.all([held,installing]);
-      expect((await db.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`)[0].count).toBe(11);
+      expect((await db.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`)[0].count).toBe(12);
     }finally{release();await Promise.allSettled([held,...(installing?[installing]:[])]);await migration.end();}
   },30000);
 });

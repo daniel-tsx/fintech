@@ -74,7 +74,7 @@ export async function providerObservationHarness(migrationsFolder?: string) {
     const producer = new TrustedProviderObservations(publication, { account: f.account, mode: 'TEST', apiKey: 'sk_test_d02_fixture', maxNetworkRetries: 0 }, transport);
     return { ...f, operationId: id, outboxId, message, object, raw, transport, producer };
   }
-  return { db: h.db, sign: h.sign, receiver: h.receiver, correlate: h.correlate, read: h.read,
+  return { receipt: h, db: h.db, sign: h.sign, receiver: h.receiver, correlate: h.correlate, read: h.read,
     observationRole: role, observationSql: sql, observationPeer: peer, publication, peerPublication, accepted,
     async close() { for (const client of clients) await client.end(); await h.close(); } };
 }

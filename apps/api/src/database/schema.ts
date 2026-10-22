@@ -405,17 +405,18 @@ export const receiptIntakeAuthority = pgTable('receipt_intake_authority', {
 export const receiptAdmissions = pgTable('receipt_admissions', {
   inboxId:uuid('inbox_id').primaryKey().references(()=>providerFinancialReceipts.inboxId),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),
   contractVersion:integer('contract_version').notNull(),operation:text('operation').notNull(),financiallyRelevant:boolean('financially_relevant').notNull(),createdAt:createdAt(),
-},t=>[uniqueIndex('receipt_admission_tuple').on(t.inboxId,t.provider,t.providerAccount,t.operation),check('receipt_admission_contract',sql`${t.contractVersion}=1`),
+},t=>[uniqueIndex('receipt_admission_tuple').on(t.inboxId,t.provider,t.providerAccount,t.operation),check('receipt_admission_contract',sql`${t.contractVersion} in (1,2)`),
   foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[receiptIntakeAuthority.provider,receiptIntakeAuthority.providerAccount]})]);
 export const receiptAdmissionObligations = pgTable('receipt_admission_obligations', {
   inboxId:uuid('inbox_id').primaryKey(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),operation:text('operation').notNull(),
   merchantId:uuid('merchant_id'),currency:text('currency'),paymentId:uuid('payment_id'),proofRevision:integer('proof_revision'),disposition:text('disposition').notNull(),
+  paymentOperationProofId:uuid('payment_operation_proof_id'),
   obligationRevision:allocationMoney('obligation_revision').notNull().default(0n),scopeEvidenceRevision:allocationMoney('scope_evidence_revision'),
   intakeEvidenceRevision:allocationMoney('intake_evidence_revision').notNull(),reviewId:uuid('review_id').references(()=>financialEvidenceReviews.id),resolutionId:uuid('resolution_id'),
   createdAt:createdAt(),resolvedAt:timestamp('resolved_at',{withTimezone:true}),
 },t=>[check('receipt_obligation_revisions',sql`${t.obligationRevision}>=0 and ${t.intakeEvidenceRevision}>=0`),
   check('receipt_obligation_disposition',sql`${t.disposition} in ('AWAITING_CONFIRMATION','AWAITING_CORRELATION','AWAITING_APPLICATION','BLOCKING_REVIEW','CLEARED_APPLICATION','CLEARED_NO_EFFECT')`),
-  check('receipt_obligation_owner',sql`((${t.merchantId} is null and ${t.currency} is null and ${t.paymentId} is null and ${t.proofRevision} is null and ${t.scopeEvidenceRevision} is null) or (${t.merchantId} is not null and ${t.currency} is not null and ${t.paymentId} is not null and ${t.proofRevision}=1 and ${t.scopeEvidenceRevision}>=1)) is true`),
+  check('receipt_obligation_owner',sql`((${t.merchantId} is null and ${t.currency} is null and ${t.paymentId} is null and ${t.proofRevision} is null and ${t.paymentOperationProofId} is null and ${t.scopeEvidenceRevision} is null) or (${t.merchantId} is not null and ${t.currency} is not null and ${t.paymentId} is not null and ${t.scopeEvidenceRevision}>=1 and ((${t.proofRevision}=1 and ${t.paymentOperationProofId} is null) or (${t.proofRevision} is null and ${t.paymentOperationProofId} is not null)))) is true`),
   check('receipt_obligation_scope_state',sql`(${t.disposition} in ('AWAITING_CONFIRMATION','AWAITING_CORRELATION') and ${t.merchantId} is null) or ${t.disposition}='BLOCKING_REVIEW' or (${t.disposition} in ('AWAITING_APPLICATION','CLEARED_APPLICATION','CLEARED_NO_EFFECT') and ${t.merchantId} is not null)`),
   check('receipt_pending_confirmation',sql`(${t.operation}='refund.pending' and ${t.disposition} in ('AWAITING_CONFIRMATION','BLOCKING_REVIEW')) or (${t.operation}<>'refund.pending' and ${t.disposition}<>'AWAITING_CONFIRMATION')`),
   check('receipt_obligation_resolution',sql`(${t.disposition} in ('CLEARED_APPLICATION','CLEARED_NO_EFFECT') and ${t.resolvedAt} is not null and ${t.resolutionId} is not null) or (${t.disposition} not in ('CLEARED_APPLICATION','CLEARED_NO_EFFECT') and ${t.resolvedAt} is null and ${t.resolutionId} is null)`),
@@ -425,6 +426,7 @@ export const receiptAdmissionObligations = pgTable('receipt_admission_obligation
   foreignKey({columns:[t.inboxId,t.provider,t.providerAccount,t.operation],foreignColumns:[receiptAdmissions.inboxId,receiptAdmissions.provider,receiptAdmissions.providerAccount,receiptAdmissions.operation]}),
   foreignKey({columns:[t.merchantId,t.currency],foreignColumns:[captureAccountingScopes.merchantId,captureAccountingScopes.currency]}),
   foreignKey({columns:[t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency],foreignColumns:[webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency]}),
+  foreignKey({columns:[t.inboxId,t.paymentOperationProofId,t.paymentId,t.merchantId,t.currency],foreignColumns:[paymentOperationEvidence.inboxId,paymentOperationEvidence.id,paymentOperationEvidence.paymentId,paymentOperationEvidence.merchantId,paymentOperationEvidence.currency]}),
   foreignKey({columns:[t.resolutionId,t.inboxId],foreignColumns:[receiptObligationResolutions.id,receiptObligationResolutions.inboxId]})]);
 export const receiptObligationResolutions = pgTable('receipt_obligation_resolutions', {
   id:uuid('id').primaryKey().defaultRandom(),inboxId:uuid('inbox_id').notNull().references(():AnyPgColumn=>receiptAdmissionObligations.inboxId),kind:text('kind').notNull(),
@@ -561,3 +563,22 @@ export const financialApplicationEffectLinks = pgTable('financial_application_ef
 }, t => [primaryKey({ columns: [t.manifestId,t.relationName,t.effectId] }),
   foreignKey({ columns: [t.manifestId,t.rootId], foreignColumns: [financialApplicationManifests.id,financialApplicationManifests.rootId] }),
   foreignKey({ columns: [t.rootId,t.merchantId,t.currency], foreignColumns: [financialApplicationRoots.id,financialApplicationRoots.merchantId,financialApplicationRoots.currency] })]);
+
+// B1 storage only. SQL0011 owns checked source interpretation and closed finality.
+export const paymentOperationEvidence = pgTable('payment_operation_evidence', {
+  id:uuid('id').primaryKey().defaultRandom(),inboxId:uuid('inbox_id').notNull().references(()=>receiptAdmissions.inboxId),proofVersion:integer('proof_version').notNull(),
+  operation:text('operation').notNull(),outcome:text('outcome').notNull(),provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),providerMode:text('provider_mode').notNull(),
+  attemptId:uuid('attempt_id').notNull(),...allocationScope(),outboxId:uuid('outbox_id').notNull().references(()=>providerCommandAuthorities.outboxId),
+  sourceId:uuid('source_id').notNull(),executionId:uuid('execution_id').notNull(),authorizationSourceId:uuid('authorization_source_id').references(()=>providerObservationSources.id),
+  paymentIntentId:text('payment_intent_id').notNull(),chargeId:text('charge_id').notNull(),capturePrincipal:allocationMoney('capture_principal'),authorizedPrincipal:allocationMoney('authorized_principal'),
+  accountingPolicy:text('accounting_policy').notNull(),acceptanceEpoch:allocationMoney('acceptance_epoch').notNull(),receiptRevision:allocationMoney('receipt_revision').notNull(),
+  attemptGeneration:integer('attempt_generation').notNull(),scopeRevision:allocationMoney('scope_revision').notNull(),intakeRevision:allocationMoney('intake_revision').notNull(),
+  facts:jsonb('facts').notNull(),fingerprint:bytea('fingerprint').notNull(),validatorVersion:text('validator_version').notNull(),sealedAt:timestamp('sealed_at',{withTimezone:true}).notNull().defaultNow(),
+  databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull().default(sql`session_user`),
+},t=>[uniqueIndex('payment_operation_receipt_version').on(t.inboxId,t.proofVersion),uniqueIndex('payment_operation_owned_proof').on(t.inboxId,t.id,t.paymentId,t.merchantId,t.currency),
+  index('payment_operation_attempt').on(t.attemptId),index('payment_operation_provider_object').on(t.provider,t.providerAccount,t.paymentIntentId),
+  foreignKey({columns:[t.attemptId,t.paymentId,t.merchantId,t.currency],foreignColumns:[paymentAttempts.id,paymentAttempts.paymentId,paymentAttempts.merchantId,paymentAttempts.currency]}),
+  foreignKey({columns:[t.sourceId,t.outboxId],foreignColumns:[providerObservationSources.id,providerObservationSources.outboxId]}),
+  foreignKey({columns:[t.executionId,t.outboxId],foreignColumns:[providerCommandExecutions.id,providerCommandExecutions.outboxId]}),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]}),
+  check('payment_operation_version',sql`${t.proofVersion}=1 and ${t.validatorVersion}='PAYMENT_OPERATION_V1' and ${t.accountingPolicy}='LEGACY' and ${t.acceptanceEpoch}=0`)]);

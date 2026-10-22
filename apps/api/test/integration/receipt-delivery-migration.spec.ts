@@ -67,16 +67,18 @@ describeMigration('R0.2 additive delivery migration', () => {
   }
   afterAll(async () => { for (const db of clients) await db.onApplicationShutdown(); });
 
-  it('fresh eleven-migration chain and repeated install create no delivery, barriers or activation', async () => {
+  it('fresh twelve-migration chain and repeated install create no delivery, barriers or activation', async () => {
     const db = await isolated(); await apply(db); const before = await fingerprint(db); await apply(db);
     expect(await fingerprint(db)).toEqual(before);
     expect((await db.sql`select (select count(*)::int from drizzle.__drizzle_migrations) as migrations,
       (select count(*)::int from receipt_delivery_attempts) as attempts,(select count(*)::int from receipt_delivery_barriers) as barriers,
-      (select count(*)::int from capture_accounting_scopes where status='ACTIVE') as active`)[0]).toEqual({ migrations: 11, attempts: 0, barriers: 0, active: 0 });
+      (select count(*)::int from capture_accounting_scopes where status='ACTIVE') as active`)[0]).toEqual({ migrations: 12, attempts: 0, barriers: 0, active: 0 });
   }, 30000);
   it('populated 0007 upgrade preserves original financial and nonfinancial admission/proof/review evidence', async () => {
     const db = await isolated(); await apply(db, staged(8)); const h = await history(db), before = await fingerprint(db);
-    await apply(db); expect(await fingerprint(db)).toEqual(before);
+    // Preserve the original R0.2 byte-level function assertion through0010;
+    // B1 separately tests the deliberate versioned0011 function/storage upgrade.
+    await apply(db, staged(11)); expect(await fingerprint(db)).toEqual(before);
     expect(await db.sql`select id from receipt_delivery_attempts`).toHaveLength(0);
     expect((await db.sql`select financially_relevant from receipt_admissions where inbox_id=${h.neutralId}`)[0].financially_relevant).toBe(false);
     expect(await db.sql`select * from receipt_admission_obligations where inbox_id=${h.neutralId}`).toHaveLength(0);
@@ -108,7 +110,7 @@ describeMigration('R0.2 additive delivery migration', () => {
     const sql = postgres(urls.get(db)!, { max: 1 }); let pending: Promise<void> | undefined;
     try {
       await Promise.race([started, held]); const [backend] = await sql<{ pid: number }[]>`select pg_backend_pid() as pid`;
-      expect(backend.pid).not.toBe(holder); pending = migrate(drizzle(sql), { migrationsFolder: folder });
+      expect(backend.pid).not.toBe(holder); pending = migrate(drizzle(sql), { migrationsFolder: staged(11) });
       let waited = false;
       for (let i = 0; i < 150; i++) { if ((await db.sql<{ yes: boolean }[]>`select ${holder}=any(pg_blocking_pids(${backend.pid})) as yes`)[0].yes) { waited = true; break; } await delay(20); }
       expect(waited).toBe(true); release(); await held; await pending; expect(await fingerprint(db)).toEqual(before);
