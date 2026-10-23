@@ -34,6 +34,8 @@ jobs:
           package-manager-cache: false
       - name: Check agent skill synchronization
         run: node scripts/sync-agent-skills.mjs --check
+      - name: Check first-party engineering workflow
+        run: node scripts/check-engineering-workflow.mjs
       - uses: pnpm/action-setup@v6
         with:
           cache: true

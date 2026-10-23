@@ -13,6 +13,14 @@ AI tools help inspect code, trace transaction boundaries, draft changes and run 
 5. **Record.** Assess documentation needs using [AGENTS.md's completion rules](../AGENTS.md#finish); update the owning document when needed. Label evidence as inspected, unit-tested, database-tested or observed in the browser. Record environment and failures.
 6. **Review.** Read the final diff against the original scope. Human review remains necessary for financial semantics, security and any use beyond local study.
 
+## Optional autonomous orchestration pilot
+
+On explicit request, use the **locally authored** [`engineering-workflow`](../.agents/skills/engineering-workflow/SKILL.md) skill to coordinate planning, independent plan/code reviews, bounded corrections and human acceptance. It is separate from the seven pinned vendored skills in `skill-sources.json`: do not add it to that upstream manifest or edit upstream content. The Codex and Claude copies are identical and checked by `node scripts/check-engineering-workflow.mjs`. The existing `.tmp/` ignore rule holds scoped plans and review handoffs; no new permanent per-run audit reports are required by this pilot.
+
+The first Fintech pilot is **DESIGN_ONLY** against the local R2-B2 Run A design brief: independent review may correct the plan but cannot implement B2-A, create migrations, activate financial scopes, push or deploy. If the host cannot run a genuinely fresh independent reviewer, mark the review blocked and hand off to a separate session. The skill is instructions only, not a background job or guaranteed native-agent launcher.
+
+The approach is an original adaptation inspired by [Superpowers subagent-driven development](https://github.com/obra/superpowers/tree/main/skills/subagent-driven-development), [Superpowers requesting code review](https://github.com/obra/superpowers/tree/main/skills/requesting-code-review), and [Oh My Claude Code staged teams](https://github.com/Yeachan-Heo/oh-my-claudecode), integrated with the seven existing repository skills. No upstream skill code was copied.
+
 ## Review questions for payment changes
 
 - Does local acceptance still commit intent, command, audit and replay response together?
