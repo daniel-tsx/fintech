@@ -1,6 +1,7 @@
 node_modules/
 .pnpm-store/
 .tmp/
+.claude/worktrees/
 .next/
 dist/
 coverage/

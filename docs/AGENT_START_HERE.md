@@ -16,7 +16,7 @@ Read what your [task size](../AGENTS.md#task-size) requires. This checkout follo
 | Retries, inbox, outbox or workers | Webhooks/idempotency, outbox delivery, [failure recovery](failure-recovery.md) | `outbox/`, `rabbitmq/`, `payment-commands/`, `webhooks/`, `jobs/` |
 | Reconciliation | [Reconciliation](reconciliation.md), Stripe boundary, failure recovery | `reconciliation/`, `PaymentProvider.fetchStatus` and tests |
 | Auth, tenancy, logging | [Security](security.md), [observability](observability.md) | Guards, controllers, serializers, audit and middleware |
-| Dashboard | [UI signature](ui-signature.md), verification, relevant payment-flow document | `apps/web/app/`, `components/`, `lib/api.ts` and API response shape |
+| Dashboard | [UI signature](ui-signature.md); the payment-flow document only when the page's behavior, not just its presentation, changes | `apps/web/app/`, `components/`, `lib/api.ts` and API response shape |
 | Setup, CI, scripts | Verification, [AI workflow](AI_WORKFLOW.md) | Package scripts, lockfile, Compose, env loading and CI |
 
 API code paths above are relative to `apps/api/src/` unless stated otherwise. Test claims against `apps/api/test/`. The immutable triggers and functional indexes in SQL exceed what the Drizzle schema describes.

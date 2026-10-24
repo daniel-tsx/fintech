@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { verifyIntegration } from './test-integration-docker.mjs';
+import { specArtifacts, verifyIntegration } from './test-integration-docker.mjs';
 
-async function scenario({ fail, unsafe, passed = 4 } = {}) {
+async function scenario({ fail, unsafe, passed = 4, tmpRoot, specFiles = [] } = {}) {
   const calls = [];
   const messages = [];
   const env = { npm_execpath: '/fixture/pnpm.cjs', DATABASE_URL: 'existing-database', MIGRATION_ADMIN_URL: 'existing-admin',
@@ -28,12 +29,17 @@ async function scenario({ fail, unsafe, passed = 4 } = {}) {
       networks: { default: { name: `${project}_default` } } });
     }
     if (args.includes('port')) return '127.0.0.1:55439';
-    if (step === 'tests') await writeFile(args[args.indexOf('--outputFile') + 1], JSON.stringify({
-      success: true, numPassedTests: passed, numFailedTests: 0, numPendingTests: 2,
-    }));
+    if (step === 'tests') {
+      await writeFile(args[args.indexOf('--outputFile') + 1], JSON.stringify({
+        success: true, numPassedTests: passed, numFailedTests: 0, numPendingTests: 2,
+      }));
+      for (const name of specFiles) await writeFile(join(tmpRoot, name), 'fixture\n');
+    }
     return '';
   };
-  const status = await verifyIntegration({ run, env, log: (message) => messages.push(message) });
+  // Never touch the repository's real .tmp/ from unit tests.
+  tmpRoot ??= await mkdtemp(join(tmpdir(), 'verify-tmp-'));
+  const status = await verifyIntegration({ run, env, log: (message) => messages.push(message), tmpRoot });
   return { status, calls, messages, env };
 }
 
@@ -67,6 +73,7 @@ test('the installed dotenv loader cannot replace isolated URLs with an inherited
   const result = await scenario();
   const childEnv = result.calls.find(({ step }) => step === 'migration').options.env;
   const existingFile = join(dirname(childEnv.DOTENV_CONFIG_PATH), 'existing.env');
+  await mkdir(dirname(existingFile), { recursive: true }); // a passing run removes its own directory
   await writeFile(existingFile, 'DATABASE_URL=existing-database\nMIGRATION_ADMIN_URL=existing-admin\n');
   const apiRequire = createRequire(new URL('../apps/api/package.json', import.meta.url));
   const dotenv = createRequire(apiRequire.resolve('@nestjs/config')).resolve('dotenv/config');
@@ -105,4 +112,33 @@ test('zero executed tests cannot be reported as PASS', async () => {
   assert.equal(result.status, 1);
   assert(!result.messages.some((line) => line.startsWith('PASS integration tests:')));
   assert.equal(result.calls.at(-1).step, 'cleanup');
+});
+
+const UUID = '0b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d';
+const SPEC_FILES = [`r2a-migrations-${UUID}`, 'r0-independent-regression-db.txt', 'r2b11-committed.json'];
+
+test('a passing run removes its Jest output and spec byproducts, and nothing else', async () => {
+  const tmpRoot = await mkdtemp(join(tmpdir(), 'verify-tmp-'));
+  await mkdir(join(tmpRoot, 'other-task'));
+  await writeFile(join(tmpRoot, `stale-${UUID}`), 'from an earlier run\n');
+  const result = await scenario({ tmpRoot, specFiles: SPEC_FILES });
+  assert.equal(result.status, 0);
+  assert.deepEqual((await readdir(tmpRoot)).sort(), ['other-task', `stale-${UUID}`]);
+  assert(result.messages.some((line) => line.includes('removed this run') && line.includes('3 spec artifact(s)')));
+});
+
+test('a failing run keeps its evidence and gathers its spec byproducts', async () => {
+  const tmpRoot = await mkdtemp(join(tmpdir(), 'verify-tmp-'));
+  const result = await scenario({ tmpRoot, specFiles: SPEC_FILES, passed: 0 });
+  assert.equal(result.status, 1);
+  const [project] = await readdir(tmpRoot);
+  assert.match(project, /^fintech-verify-/);
+  assert.deepEqual((await readdir(join(tmpRoot, project, 'artifacts'))).sort(), [...SPEC_FILES].sort());
+});
+
+test('only new spec-shaped names are attributed to a run', () => {
+  const before = new Set(['old-db.txt']);
+  assert.deepEqual(specArtifacts(before, ['old-db.txt', 'new-db.txt', 'refund-error-message-test', `fintech-verify-${UUID}`,
+    'agent-workflows', `x-${UUID}`, 'r2b11-committed.json', 'plan.md'], 'fintech-verify-self'),
+  ['new-db.txt', `x-${UUID}`, 'r2b11-committed.json']);
 });

@@ -1,0 +1,7 @@
+# Normalize text to LF in the repository and in every checkout, on every OS.
+* text=auto eol=lf
+
+# Vendored upstream skill: markdown hard line breaks (trailing double spaces) are intentional and
+# hash-pinned in .agents/skill-sources.json, so whitespace checks are off for these files only.
+.agents/skills/vercel-react-best-practices/** -whitespace
+.claude/skills/vercel-react-best-practices/** -whitespace

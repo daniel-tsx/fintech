@@ -57,3 +57,13 @@ test('appended journal entry needs its SQL file and next idx', () => {
   assert.match(problems, /idx 5, expected 2/);
   assert.match(problems, /no .*0002_c\.sql/);
 });
+
+test('an appended journal entry must have a strictly newer when', () => {
+  const add = (when) => withChanges((h) => {
+    h.set(`${DIR}/0002_c.sql`, 'create table c();');
+    h.set(J, journal(entry(0, '0000_a'), entry(1, '0001_b'), { ...entry(2, '0002_c'), when }));
+  });
+  assert.deepEqual(add(5000), []);
+  assert.match(add(1001).join(), /when 1001, which must be greater than 1001/);
+  assert.match(add(900).join(), /when 900/);
+});
