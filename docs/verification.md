@@ -132,7 +132,7 @@ Use only the ID printed by that test run. Never point this command at a developm
 
 This command covers the existing **PostgreSQL** suite. It does not verify Redis/BullMQ or RabbitMQ application boundaries: those are currently mocked, and Compose supplies no broker. Changes to those boundaries require targeted integration tests with isolated services; report NOT RUN with the missing coverage until such checks exist. A Redis PING or broker startup alone is not application integration evidence. Extend the existing suite/Compose conventions only when a task needs that coverage, without starting workers that could call a real PSP.
 
-CI retains its job-owned PostgreSQL service container and uses the same `pnpm db:migrate` / `pnpm test:integration` commands. Do not start a second Compose stack inside that job. Its existing conservative integration gate remains unchanged for all pushes/PRs; risk-based local verification does not remove that gate.
+CI retains its job-owned PostgreSQL service container and uses the same `pnpm db:migrate` / `pnpm test:integration` commands. Do not start a second Compose stack inside that job. Its existing conservative integration gate remains unchanged for PRs and `main`; risk-based local verification does not remove that gate.
 
 ## Database integration tests
 
@@ -259,10 +259,11 @@ For failure simulation run `pnpm --filter @fintech-lab/api test:unit` and use th
 
 ## CI coverage
 
-[CI](../.github/workflows/ci.yml) runs on pushes, pull requests and manual dispatch:
+[CI](../.github/workflows/ci.yml) runs on pull requests, pushes to `main` and manual dispatch:
 
 - Node 22/24 jobs: `node scripts/sync-agent-skills.mjs --check` before dependency installation, then frozen install, `pnpm test:verification`, lint, unit/default tests, build, typecheck.
 - Node 24 integration job: fresh PostgreSQL 17 service container, frozen install, `pnpm db:migrate` and `pnpm test:integration` with `RUN_DB_TESTS=1`, `RUN_MIGRATION_TESTS=1` and `MIGRATION_ADMIN_URL` pointing only to that service. Its fixture admin can create databases/roles; publisher/worker assertions use restricted non-owner roles. Suites close connections and retain immutable fixture history locally; CI service disposal removes the job's isolated databases/roles. No seed, Redis or RabbitMQ is needed.
+- Pull-request migration guard: fails when the PR modifies, renames or deletes an existing file in `apps/api/drizzle/` outside `meta/`; new forward migrations are allowed.
 
 Jobs have read-only repository permissions and use no repository/service secrets. The workflow follows the official [PostgreSQL service-container guide](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers) and [pnpm action setup](https://github.com/pnpm/action-setup).
 

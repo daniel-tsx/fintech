@@ -2,11 +2,11 @@
 
 Status: current. Owner: task routing; rules live in [AGENTS.md](../AGENTS.md).
 
-Read the [project overview](../README.md), [documentation index](README.md), package scripts and Git status first. This checkout follows the Mock PSP → Stripe → RabbitMQ learning sequence; older branch notes are not current runtime instructions.
+Read what your [task size](../AGENTS.md#task-size) requires. This checkout follows the Mock PSP → Stripe → RabbitMQ learning sequence; older branch notes are not current runtime instructions.
 
 ## Read by task
 
-| Task | Required documents | Code to inspect |
+| Task | Documents (T2: all; T1: the one owning the behavior) | Code to inspect |
 | --- | --- | --- |
 | Architecture, README, claims | [Architecture](architecture.md), [verification](verification.md), [Stripe boundary](real-psp-stripe.md), [outbox delivery](outbox-rabbitmq.md) | Root modules, runtime entry points, tests and Git history |
 | Authorization, capture, cancellation | [Payment lifecycle](payment-lifecycle.md), Stripe boundary, [webhooks/idempotency](webhooks-and-idempotency.md), [concurrency](concurrency.md) | `payments/`, `payment-commands/`, `payment-provider/`, `webhooks/` |
