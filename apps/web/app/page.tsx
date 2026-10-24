@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ApiUnavailableError, api, formatMoney, formatTime } from '@/lib/api';
+import { ApiUnavailableError, api } from '@/lib/api';
+import { formatMoney, formatTime } from '@/lib/format';
 import { Balance, BalanceStrip, ConnectionState, DataTable, EvidencePane, PageHeading, PaymentLink, Status, TraceRail } from '@/components/console';
 
 interface Payment { id: string; status: string; amount: string; currency: string; capturedAmount: string; createdAt: string }
