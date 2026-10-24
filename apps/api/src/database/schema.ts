@@ -528,12 +528,17 @@ export const financialApplicationManifests = pgTable('financial_application_mani
   id: uuid('id').primaryKey().defaultRandom(), rootId: uuid('root_id').notNull().references(() => financialApplicationRoots.id),
   transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(),
   inboxId: uuid('inbox_id').notNull(), proofRevision: integer('proof_revision').notNull(), proofOperation: text('proof_operation').notNull(), claimGeneration: integer('claim_generation').notNull(),
+  proofKind: text('proof_kind').notNull().default('REFUND_V1'), paymentOperationProofId: uuid('payment_operation_proof_id'),
+  legacyProofInboxId: uuid('legacy_proof_inbox_id').generatedAlwaysAs(sql`case when proof_kind='REFUND_V1' then inbox_id end`),
+  paymentProofInboxId: uuid('payment_proof_inbox_id').generatedAlwaysAs(sql`case when proof_kind='PAYMENT_OPERATION_V1' then inbox_id end`),
   merchantId: uuid('merchant_id').notNull(), currency: text('currency').notNull(), paymentId: uuid('payment_id').notNull(),
   policy: text('policy').notNull(), epoch: allocationMoney('epoch').notNull(), scopeRevision: allocationMoney('scope_revision').notNull(), intakeRevision: allocationMoney('intake_revision').notNull(),
   contractVersion: integer('contract_version').notNull(), result: text('result').notNull(), sourceManifest: jsonb('source_manifest').notNull(), effectManifest: jsonb('effect_manifest').notNull(), createdAt: createdAt(),
 }, t => [uniqueIndex('application_manifest_transaction').on(t.transactionId,t.backendPid), uniqueIndex('application_manifest_root').on(t.id,t.rootId),
   foreignKey({ columns: [t.rootId,t.merchantId,t.currency], foreignColumns: [financialApplicationRoots.id,financialApplicationRoots.merchantId,financialApplicationRoots.currency] }),
-  foreignKey({ columns: [t.inboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] })]);
+  check('application_manifest_proof_branch',sql`((${t.proofKind}='REFUND_V1' and ${t.paymentOperationProofId} is null) or (${t.proofKind}='PAYMENT_OPERATION_V1' and ${t.paymentOperationProofId} is not null)) is true`),
+  foreignKey({ name:'application_manifest_refund_proof',columns: [t.legacyProofInboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] }),
+  foreignKey({ name:'application_manifest_payment_proof',columns: [t.paymentProofInboxId,t.paymentOperationProofId,t.paymentId,t.merchantId,t.currency],foreignColumns:[paymentOperationEvidence.inboxId,paymentOperationEvidence.id,paymentOperationEvidence.paymentId,paymentOperationEvidence.merchantId,paymentOperationEvidence.currency] })]);
 export const financialApplicationPermits = pgTable('financial_application_permits', {
   transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(), manifestId: uuid('manifest_id').notNull().unique().references(() => financialApplicationManifests.id),
   databasePrincipal: customType<{ data: string }>({ dataType: () => 'name' })('database_principal').notNull().default(sql`session_user`),

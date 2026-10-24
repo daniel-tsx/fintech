@@ -23,7 +23,7 @@ describeMigration('B3.2 B.1 forward migration and closed financial floor',()=>{
     const admin=postgres(value,{max:1}),name=`fintech_b32b1_migration_${randomUUID().replaceAll('-','')}`;
     try{await admin.unsafe(`create database "${name}"`);}finally{await admin.end();}url.pathname=`/${name}`;
     const db=new DatabaseService(new ConfigService({DATABASE_URL:url.toString()}));clients.push(db);urls.set(db,url.toString());return db;}
-  async function apply(db:DatabaseService,path=folder){const client=postgres(urls.get(db)!,{max:1});try{await migrate(drizzle(client),{migrationsFolder:path});}finally{await client.end();}}
+  async function apply(db:DatabaseService,path=stagedFolder(12)){const client=postgres(urls.get(db)!,{max:1});try{await migrate(drizzle(client),{migrationsFolder:path});}finally{await client.end();}}
   function stagedFolder(before:number,failing=false){const target=resolve(__dirname,`../../../../.tmp/b32b1-migrations-${randomUUID()}`);mkdirSync(resolve(target,'meta'),{recursive:true});
     const journal=JSON.parse(readFileSync(resolve(folder,'meta/_journal.json'),'utf8')) as {entries:{idx:number;tag:string}[]};journal.entries=journal.entries.filter(e=>e.idx<before);
     writeFileSync(resolve(target,'meta/_journal.json'),JSON.stringify(journal));for(const e of journal.entries)copyFileSync(resolve(folder,`${e.tag}.sql`),resolve(target,`${e.tag}.sql`));
@@ -90,7 +90,7 @@ describeMigration('B3.2 B.1 forward migration and closed financial floor',()=>{
     const gate=new Promise<void>(r=>{release=r;}),started=new Promise<void>(r=>{ready=r;});let blocker=0;
     const held=db.transaction(async tx=>{blocker=(await tx<{pid:number}[]>`select pg_backend_pid() as pid`)[0].pid;await tx`lock table public.refund_capture_allocations in row exclusive mode`;ready();await gate;});
     const migration=postgres(urls.get(db)!,{max:1});let installing:Promise<void>|undefined;
-    try{await Promise.race([started,held]);const waiter=(await migration<{pid:number}[]>`select pg_backend_pid() as pid`)[0].pid;installing=migrate(drizzle(migration),{migrationsFolder:folder});
+    try{await Promise.race([started,held]);const waiter=(await migration<{pid:number}[]>`select pg_backend_pid() as pid`)[0].pid;installing=migrate(drizzle(migration),{migrationsFolder:stagedFolder(12)});
       let blocked=false;for(let i=0;i<150;i++){const [r]=await db.sql<{blocked:boolean}[]>`select ${blocker}=any(pg_blocking_pids(${waiter})) as blocked`;if(r.blocked){blocked=true;break;}await delay(20);}expect(blocked).toBe(true);
       expect((await db.sql`select to_regclass('public.webhook_financial_evidence') as proof`)[0].proof).toBeNull();release();await Promise.all([held,installing]);
       expect((await db.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`)[0].count).toBe(12);

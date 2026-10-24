@@ -76,5 +76,5 @@ export async function providerObservationHarness(migrationsFolder?: string) {
   }
   return { receipt: h, db: h.db, sign: h.sign, receiver: h.receiver, correlate: h.correlate, read: h.read,
     observationRole: role, observationSql: sql, observationPeer: peer, publication, peerPublication, accepted,
-    async close() { for (const client of clients) await client.end(); await h.close(); } };
+    async close(expectedMigrations = 13) { for (const client of clients) await client.end(); await h.close(expectedMigrations); } };
 }

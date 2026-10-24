@@ -11,19 +11,19 @@ import { publishCommandObservation, signedEvidence } from '../support/trusted-ev
 const describeDb=process.env.RUN_DB_TESTS==='1'&&process.env.RUN_MIGRATION_TESTS==='1'?describe:describe.skip;
 describeDb('R2-B1 forward migration and legacy compatibility',()=>{
   const folder=resolve(__dirname,'../../drizzle'),all:Awaited<ReturnType<typeof providerObservationHarness>>[]=[];
-  function staged(failure=false){
+  function staged(failure=false, count=11){
     const target=resolve(__dirname,`../../../../.tmp/r2b1-migration-${randomUUID()}`);mkdirSync(resolve(target,'meta'),{recursive:true});
     const journal=JSON.parse(readFileSync(resolve(folder,'meta/_journal.json'),'utf8')) as {entries:{idx:number;tag:string}[]};
-    journal.entries=journal.entries.filter(e=>e.idx<(failure?12:11));writeFileSync(resolve(target,'meta/_journal.json'),JSON.stringify(journal));
+    journal.entries=journal.entries.filter(e=>e.idx<(failure?12:count));writeFileSync(resolve(target,'meta/_journal.json'),JSON.stringify(journal));
     for(const e of journal.entries)copyFileSync(resolve(folder,e.tag+'.sql'),resolve(target,e.tag+'.sql'));
     if(failure){const p=resolve(target,'0011_payment_operation_evidence.sql');writeFileSync(p,readFileSync(p,'utf8')+"\n--> statement-breakpoint\nDO $$ BEGIN RAISE EXCEPTION 'planned B1 rollback'; END $$;\n");}
     return target;
   }
-  async function setup(source=folder){const h=await providerObservationHarness(source);all.push(h);
+  async function setup(source=staged(false,12)){const h=await providerObservationHarness(source);all.push(h);
     const url=new URL(process.env.MIGRATION_ADMIN_URL!);url.pathname='/'+String((await h.db.sql`select current_database() n`)[0].n);
-    const apply=async(from=folder)=>{const sql=postgres(url.toString(),{max:1});try{await migrate(drizzle(sql),{migrationsFolder:from});}finally{await sql.end();}};
+    const apply=async(from=staged(false,12))=>{const sql=postgres(url.toString(),{max:1});try{await migrate(drizzle(sql),{migrationsFolder:from});}finally{await sql.end();}};
     return{h,url,apply};}
-  afterAll(async()=>{for(const h of all)await h.close();});
+  afterAll(async()=>{for(const h of all)await h.close(12);});
   async function fingerprint(sql:Sql){const out:Record<string,unknown>={};
     for(const table of ['ledger_transactions','ledger_entries','capture_accounting_lots','refund_capture_allocations','provider_financial_receipts','webhook_financial_evidence',
       'receipt_admissions','receipt_admission_obligations','provider_command_authorities','provider_command_executions','provider_observation_sources','provider_observation_obligations']){
@@ -63,7 +63,7 @@ describeDb('R2-B1 forward migration and legacy compatibility',()=>{
     const gate=new Promise<void>(r=>{release=r;}),started=new Promise<void>(r=>{ready=r;});
     const first=h.db.transaction(async tx=>{holder=Number((await tx`select pg_backend_pid() p`)[0].p);await tx`lock table receipt_admission_obligations in row exclusive mode`;ready();await gate;});
     const sql=postgres(url.toString(),{max:1});let pending:Promise<void>|undefined;
-    try{await Promise.race([started,first]);const waiter=Number((await sql`select pg_backend_pid() p`)[0].p);pending=migrate(drizzle(sql),{migrationsFolder:folder});let observed=false;
+    try{await Promise.race([started,first]);const waiter=Number((await sql`select pg_backend_pid() p`)[0].p);pending=migrate(drizzle(sql),{migrationsFolder:staged(false,12)});let observed=false;
       for(let n=0;n<150;n++){if((await h.db.sql`select ${holder}=any(pg_blocking_pids(${waiter})) b`)[0].b){observed=true;break;}await delay(20);}expect(observed).toBe(true);
       expect((await h.db.sql`select to_regclass('public.payment_operation_evidence') relation`)[0].relation).toBeNull();release();await Promise.all([first,pending]);await apply();
     }finally{release();await Promise.allSettled([first,...(pending?[pending]:[])]);await sql.end();}

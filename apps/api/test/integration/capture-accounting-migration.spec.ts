@@ -51,8 +51,8 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
     return target;
   }
   it('installs 0000–0009 on an empty database; repeated migrator execution is a no-op', async () => {
-    const database = await isolated(); await apply(database,folder);
-    const before = await fingerprint(database); await apply(database,folder);
+    const database = await isolated(); await apply(database,historicalFolder(12));
+    const before = await fingerprint(database); await apply(database,historicalFolder(12));
     expect(await fingerprint(database)).toEqual(before);
     const [row] = await database.sql`select (select count(*)::integer from drizzle.__drizzle_migrations) as migrations,
       (select count(*)::integer from capture_accounting_lots) as lots,(select count(*)::integer from accounting_exceptions) as exceptions`;
@@ -66,7 +66,7 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
     const database = await isolated(); await apply(database,historicalFolder(5));
     const f = await captureFixture(database);
     await database.sql`insert into capture_accounting_scopes (merchant_id,currency) values (${f.merchantId},'USD')`;
-    const before = await fingerprint(database); await apply(database,folder); await apply(database,folder);
+    const before = await fingerprint(database); await apply(database,historicalFolder(12)); await apply(database,historicalFolder(12));
     expect(await fingerprint(database)).toEqual(before);
     const labels = await database.sql<{enumlabel:string}[]>`select enumlabel from pg_enum where enumtypid='public.inbox_status'::regtype and enumlabel='ACCOUNTING_EXCEPTION'`;
     expect(labels).toEqual([{enumlabel:'ACCOUNTING_EXCEPTION'}]);
@@ -117,7 +117,7 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
     ]}));
     const before = await fingerprint(database);
     const functionsBefore = await database.sql<{proname:string;definition:string}[]>`select proname,pg_get_functiondef(oid) as definition from pg_proc where pronamespace='public'::regnamespace order by proname`;
-    await apply(database,folder); expect(await fingerprint(database)).toEqual(before);
+    await apply(database,historicalFolder(12)); expect(await fingerprint(database)).toEqual(before);
     const [orphanException] = await database.sql`select status,observed_conflict->>'journal_id' as journal from accounting_exceptions where evidence_key=${`legacy-journal:${orphan}`}`;
     expect(orphanException).toMatchObject({status:'OPEN',journal:orphan});
     for (const c of cases) {
@@ -139,7 +139,7 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
     const [allocations] = await database.sql`select (select count(*)::integer from refund_capture_allocations) as refunds,(select count(*)::integer from dispute_capture_allocations) as disputes`;
     expect(allocations).toMatchObject({refunds:0,disputes:0});
     const [countsBefore] = await database.sql`select count(*)::integer as exceptions from accounting_exceptions`;
-    await apply(database,folder); expect(await fingerprint(database)).toEqual(before);
+    await apply(database,historicalFolder(12)); expect(await fingerprint(database)).toEqual(before);
     const [countsAfter] = await database.sql`select count(*)::integer as exceptions from accounting_exceptions`; expect(countsAfter).toEqual(countsBefore);
   },30000);
   it('classifies NULL-owned legacy pending entries for review while backfilling a valid capture', async () => {
@@ -158,7 +158,7 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
         {accountCode:'PLATFORM_FEE_REVENUE',merchantId:null,credit:300},
       ]});
     });
-    const before = await fingerprint(database); await apply(database,folder);
+    const before = await fingerprint(database); await apply(database,historicalFolder(12));
     expect(await fingerprint(database)).toEqual(before);
     const [invalid] = await database.sql`select original_valid,classification from capture_accounting_legacy_inventory where capture_attempt_id=${attemptId}`;
     expect(invalid).toEqual({original_valid:false,classification:'REVIEW_REQUIRED'});
@@ -181,7 +181,7 @@ describeMigration('B1 migration freshness and conservative legacy upgrade', () =
     const before = await fingerprint(database);
     // Drizzle wraps the original PostgreSQL exception; assert its cause too.
     let rejection: unknown;
-    try { await apply(database,folder); } catch (error: unknown) { rejection=error; }
+    try { await apply(database,historicalFolder(12)); } catch (error: unknown) { rejection=error; }
     expect(rejection).toBeDefined();
     expect((rejection as {cause:Error}).cause.message).toMatch(/Unscoped legacy CAPTURE/i);
     expect(await fingerprint(database)).toEqual(before);
