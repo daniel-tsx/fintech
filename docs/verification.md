@@ -83,7 +83,7 @@ Build precedes standalone typecheck on a fresh checkout because the tracked Next
 | PostgreSQL integration | Five financial concurrency scenarios plus 17 F02 sealing/function-context regressions using checked-in migrations | Every financial race or full lifecycle |
 | Seeded HTTP/browser smoke | Local API/UI render fixture evidence | Actual authorization/capture at a PSP |
 
-The web `test` script prints a notice; no automated browser test suite is configured.
+The web `test` script runs `node:test` unit tests for pure display logic (`apps/web/lib/*.test.ts`, using Node's built-in TypeScript stripping); no automated browser test suite is configured.
 
 ### Windows sandbox permissions
 

@@ -146,7 +146,7 @@ export default async function PaymentDetailPage({
             rows={detail.attempts.map((attempt) => ({
               id: attempt.id,
               kind: attempt.kind.toLowerCase(),
-              status: <Status value={attempt.status} />,
+              status: <Status value={attempt.status} of="attempt" />,
               amount: formatMoney(attempt.amount, attempt.currency),
               provider: attempt.providerTransactionId ?? "—",
             }))}
