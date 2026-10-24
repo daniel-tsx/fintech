@@ -8,7 +8,7 @@ Users are engineers and operators looking for a record, its state and its amount
 
 ## Page structure
 
-Every page uses the same order: `PageHeading` (mono eyebrow, 20px title, one-line description), then key figures when the page has them, then one or more `EvidencePane`s holding tables or traces. The sidebar marks the current section with `aria-current="page"`; a skip link jumps to `main`. Below 720px the sidebar becomes a top bar with one horizontally scrolling row of links.
+Every page uses the same order: `PageHeading` (mono eyebrow, 20px title, one-line description), then key figures when the page has them, then one or more `EvidencePane`s holding tables or traces. The sidebar marks the current section with `aria-current="page"`; a skip link jumps to `main`. Below 720px the sidebar becomes a top bar (see [Responsive behaviour](#responsive-behaviour)).
 
 ## Type
 
@@ -80,7 +80,31 @@ Rules the UI must not blur:
 
 - Table cells pad 8px × 12px (about 34px rows); panes use 2px corners and 1px rules, no drop shadows.
 - Spacing steps of 4px (`--space-1` … `--space-7`).
-- Motion is 120–180ms ease-out and only explains change (hover, current item). `prefers-reduced-motion` turns all transitions and animations off.
+- Content stops widening at 1680px so rows stay readable on large screens.
+
+## Motion
+
+Motion is 120–180ms ease-out and only explains a change:
+
+- **Loading → content:** a route's content settles in once (fade and 4px rise). Filter, sort and page changes re-render in place without it, so results never flicker.
+- **Loading:** skeleton bars pulse while a route's data loads.
+- **Waiting:** the active step of an open workflow (the last `TraceRail` node) pulses slowly.
+- **Palette:** opens with a short fade; hover and current states ease their colour.
+
+`prefers-reduced-motion: reduce` removes every animation and transition, and content appears in its final state.
+
+## Responsive behaviour
+
+- Below 980px the paired panes stack. Below 720px the sidebar becomes a top bar: brand, palette button and one horizontally scrolling row of links with edge shadows; the current link scrolls into view.
+- Wide tables scroll sideways inside their pane, with edge shadows showing more columns. On phones the first column (the record's ID or time) stays pinned, so a row stays identifiable while scrolling.
+- Pages reflow without horizontal page scrolling down to 320px.
+
+## Accessibility
+
+- Text contrast is at least 4.5:1 everywhere (secondary text about 6:1); form control edges are at least 3:1 (`--rule-control`). Checked on rendered pages, not only on tokens.
+- Every interactive element is reachable by keyboard and shows a 2px accent focus ring (the chrome accent in the sidebar). Targets are at least 24×24px.
+- Status, current page and selection never rely on colour alone: glyph plus label for status, `aria-current`/`aria-selected` plus a visual mark; in Windows high-contrast mode those marks become outlines.
+- Tables have captions and column scopes; sortable headers expose `aria-sort`; the palette follows the combobox pattern; shortened IDs carry the full value for screen readers.
 
 ## States
 
