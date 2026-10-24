@@ -30,6 +30,40 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node scripts/check-migration-history.mjs "$BASE_SHA" HEAD
 
+  review-signals:
+    name: Review signals
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Lists T2-area files in the job summary and fails on focused or newly skipped tests.
+      - name: Check T2 areas and test changes
+        id: signals
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/check-pr-review-signals.mjs "$BASE_SHA" HEAD
+      - name: Sync t2-area label
+        if: ${{ !cancelled() && steps.signals.outputs.t2 != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "${{ steps.signals.outputs.t2 }}" = "true" ]; then
+            gh label create t2-area --color B60205 --description "Touches a T2 area: read carefully" --force
+            gh pr edit "$PR" --add-label t2-area
+          else
+            gh pr edit "$PR" --remove-label t2-area || true
+          fi
+
   node:
     name: Node ${{ matrix.node }} checks
     runs-on: ubuntu-latest
