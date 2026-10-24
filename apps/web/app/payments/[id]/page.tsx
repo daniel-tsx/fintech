@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { ApiUnavailableError, api, formatMoney, formatTime } from "@/lib/api";
+import { ApiUnavailableError, api } from "@/lib/api";
+import { formatMoney, formatTime } from "@/lib/format";
 import {
   DataTable,
   EvidencePane,

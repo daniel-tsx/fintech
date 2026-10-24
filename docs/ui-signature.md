@@ -49,6 +49,24 @@ Rules the UI must not blur:
 - An unknown or in-flight provider outcome is pending, never success or failure.
 - Business types (capture, refund, settlement) are labels, not statuses.
 
+## Money and time
+
+[`lib/format.ts`](../apps/web/lib/format.ts) is the only formatter, covered by `lib/format.test.ts`.
+
+- Amounts arrive as integer minor units and are converted with string arithmetic and `BigInt`, never floating point. Exponents follow Stripe: zero-decimal (`JPY`, `KRW`, `VND`, `CLP` …), three-decimal (`BHD`, `JOD`, `KWD`, `OMR`, `TND`), otherwise two. A value that is not an integer string is shown raw rather than guessed.
+- Tables carry a `Ccy` column and show the bare amount (`Amount`, raw minor units on hover). Elsewhere money reads `USD 1,234.56`; ISO codes avoid ambiguous symbols.
+- Times read `2026-10-24 07:15:36 UTC` everywhere, with seconds so events in the same minute keep their order.
+
+## Finding records
+
+- Every register follows the same order: search box (plus currency where records have one), facet chips with counts, a one-line summary, then the table. Filters, sort and page live in the URL, so views are shareable and work without JS; `next/form` keeps navigation client-side when JS is present.
+- Filters apply to the rows the API returned, and the summary says so (for example "the API returns the latest 200"); payments page through the API 100 at a time. The ledger currency filter is passed to the API.
+- Sortable headers are links with `aria-sort`. The default is newest first, the API's own order. Money sorts within a currency: by currency code, then exact minor units.
+- `IdCell` shows a short identifier, keeps the full value in the title and for screen readers, links payments to their trace and has a copy button.
+- The command palette (`/`, Ctrl/⌘+K, or the sidebar button) opens a payment from a full UUID, searches any register, or jumps to a page.
+- The ledger groups lines by journal with debit and credit totals. When the API's 500-line limit is reached, the oldest journal is marked as possibly incomplete instead of showing a misleading total.
+- A filtered list with no rows says so and offers "Clear filters"; an empty register describes the next event that will fill it.
+
 ## Density, shape and motion
 
 - Table cells pad 8px × 12px (about 34px rows); panes use 2px corners and 1px rules, no drop shadows.
