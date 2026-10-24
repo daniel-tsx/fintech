@@ -27,19 +27,11 @@ async function filesAt(directory) {
   return files.sort();
 }
 
-// Only the Codex entry point needs to replace Claude's Skill-tool invocation.
-function claudeCopy(name, file, source) {
-  if (name !== 'grill-me' || file !== 'SKILL.md') return source;
-  const codexCall = 'Read [../grilling/SKILL.md](../grilling/SKILL.md) and follow it.';
-  assert(source.toString('utf8').includes(codexCall), 'Missing Grill Me adapter');
-  return Buffer.from(source.toString('utf8').replace(codexCall, 'Call the Skill tool with "grilling".'));
-}
-
 for (const skill of manifest.skills) {
   const source = join(root, '.agents/skills', skill.name);
   const target = join(root, '.claude/skills', skill.name);
   const files = Object.keys(skill.files).sort();
-  assert(files.includes('SKILL.md') && files.includes('LICENSE'), `Incomplete skill: ${skill.name}`);
+  assert(files.includes('SKILL.md') && files.some((file) => /^LICENSE(\.txt)?$/.test(file)), `Incomplete skill: ${skill.name}`);
   assert.deepEqual(await filesAt(source), files, `Unrecorded source files: ${skill.name}`);
   const copies = [];
   for (const file of files) {
@@ -47,7 +39,7 @@ for (const skill of manifest.skills) {
     // Normalize line endings so Git's Windows checkout policy does not break integrity checks.
     assert.equal(hash(data.toString('utf8').replaceAll('\r\n', '\n')), skill.files[file],
       `Source changed; review provenance and update its hash: ${skill.name}/${file}`);
-    copies.push([file, claudeCopy(skill.name, file, data)]);
+    copies.push([file, data]);
   }
   if (!check) await mkdir(target, { recursive: true });
   const existing = await filesAt(target);

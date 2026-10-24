@@ -42,21 +42,6 @@
       }
     },
     {
-      "name": "grill-me",
-      "repository": "https://github.com/mattpocock/skills",
-      "revision": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
-      "path": "skills/productivity/grill-me",
-      "tree": "3df14e2d3a89459bf300614be9247e3ce74798f8",
-      "installedFrom": "official upstream (pinned revision)",
-      "license": "MIT",
-      "codexAdaptation": "Replace Claude Skill-tool call with reading ../grilling/SKILL.md; synchronization restores the upstream Claude entry point.",
-      "files": {
-        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
-        "SKILL.md": "14b78da25bb1f4fd8cfb3183440a0f490e93dad0d94a390cc8e8fb0f073b50d7",
-        "agents/openai.yaml": "c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b"
-      }
-    },
-    {
       "name": "grilling",
       "repository": "https://github.com/mattpocock/skills",
       "revision": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
@@ -238,6 +223,19 @@
         "rules/server-parallel-fetching.md": "569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472",
         "rules/server-parallel-nested-fetching.md": "ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3",
         "rules/server-serialization.md": "f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f"
+      }
+    },
+    {
+      "name": "frontend-design",
+      "repository": "https://github.com/anthropics/skills",
+      "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "path": "skills/frontend-design",
+      "tree": "d79e2a5bb4df4a386c2adcdd9ab8709bba28c3f6",
+      "installedFrom": "Official upstream",
+      "license": "Apache-2.0",
+      "files": {
+        "LICENSE.txt": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "SKILL.md": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
       }
     }
   ]
