@@ -21,15 +21,7 @@ Read the [project overview](../README.md), [documentation index](README.md), pac
 
 API code paths above are relative to `apps/api/src/` unless stated otherwise. Test claims against `apps/api/test/`. The immutable triggers and functional indexes in SQL exceed what the Drizzle schema describes.
 
-For ongoing F01 work, also read the [approved capture accounting contract](audits/h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09), [B1 checkpoint](audits/h1-fix-02-b1-allocation-foundation.md) and [B2.1 capture integration](audits/h1-fix-02-b2-1-capture-integration.md). Confirmed new captures now append original journal-backed lots atomically. Refund/dispute/settlement writers remain legacy and every scope remains dormant. Do not consume partially populated allocation state or treat lot creation as cutover.
-
-[B2.2 refund integration](audits/h1-fix-02-b2-2-refund-integration.md) adds a separate gated service tested with synthetic dormant admission. It is absent from runtime modules/controllers/webhook dispatch; no production switch enables it. Read its cutover and lock dependencies before wiring it. Migration 0005 adds an exception inbox disposition, not ACTIVE scopes or live refund routing.
-
-[B2.3 dispute integration](audits/h1-fix-02-b2-3-dispute-integration.md) adds the similarly disconnected dispute service and shared hold reductions in both dormant paths. Read its provider evidence, payment-state and lock dependencies before wiring either service. All scopes remain dormant; legacy settlement/refund/dispute/payout semantics remain unchanged.
-
-[B2.4 settlement integration](audits/h1-fix-02-b2-4-settlement-integration.md) adds disconnected candidate generation and recalculated completion using the same capture/allocation evidence. Read its header-first locks, independent asset/release amounts, zero effects, saved-snapshot replay and B3 dispatch/admission dependencies. No runtime route/job consumes the new service, no scope is ACTIVE, and the six legacy F01 reproductions remain red. Do not treat the dormant checkpoint as financial cutover.
-
-[B3.1 integrated verification](audits/h1-fix-02-b3-1-integrated-verification.md) exercises the dormant writers with actual capture transactions and current payouts. Read its admission boundary, legacy reconciliation inventory and lock graph before B3.2 design. Late receipt and exception/payout admission gaps are reproduced; F01/F04 remain open. Test admission and green lifecycle checks do not authorize runtime integration or scope activation.
+F01 accounting work (capture allocation and the B-series checkpoints) is dormant: no scope is ACTIVE, dormant writers are not a runtime cutover, and legacy settlement/refund/dispute/payout semantics are unchanged. Records in `docs/audits/` are historical; open one only when the task names it. [Human decisions](audits/h1-fix-02-b3-2-human-decisions.md) is the approved policy summary.
 
 ## Evidence to preserve
 

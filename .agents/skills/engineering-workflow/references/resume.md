@@ -4,7 +4,7 @@ This protocol makes native-agent workflows **recoverable**, not asynchronous. Th
 
 ## Local authoritative handoff
 
-Use one ignored workspace **per task**, for example `.tmp/agent-workflows/r2-b2-design-pilot/`. Preserve existing task workspace files; do not overwrite old reviewer evidence. The checkpoint ledger `state.json` is a recovery hint that must be verified, **not** approval or proof that an agent actually ran. Keep required independent reviewer reports, plan, snapshots and test logs in that workspace; include no secrets or real provider payloads.
+Use one ignored workspace **per task**, for example `.tmp/agent-workflows/r2-b2-design-pilot/`. Preserve existing task workspace files; do not overwrite old reviewer evidence. The checkpoint ledger `state.json` is a recovery hint that must be verified, **not** approval or proof that an agent actually ran. Keep only the files SKILL.md step 3 allows (state, plan, reviewer reports, one compact verification summary); include no secrets or real provider payloads.
 
 The helper lives at `scripts/engineering-workflow-state.mjs` and needs only Node 22+ and Git. Always run at the repository root. Example:
 

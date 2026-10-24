@@ -6,7 +6,7 @@ This is a portfolio/reference payment platform. Financial correctness takes prio
 
 1. Confirm the checkout and inspect `git status`. Preserve existing work.
 2. Read `README.md`, `CLAUDE.md`, `docs/README.md` and `package.json`.
-3. Use the reading matrix in `docs/AGENT_START_HERE.md`. Verify documents against code.
+3. Use the reading matrix in `docs/AGENT_START_HERE.md` and the [reading budget](#files-and-artifacts). Verify documents against code.
 4. State the intended change and verification. Keep the diff surgical.
 
 ## Repository context
@@ -40,6 +40,17 @@ This is a portfolio/reference payment platform. Financial correctness takes prio
 - Preserve the modular monolith and provider port. Avoid speculative financial/product features.
 - Documentation claims must point to implementation or executed checks. Separate implemented, inspected, tested and externally verified.
 - No fabricated users, metrics, testimonials, compliance claims or readiness guarantees. License choice belongs to the owner.
+
+## Files and artifacts
+
+Default to creating no new files. The deliverable is the code and tests the task needs; plans, reviews and evidence go in the chat, commit message or PR description.
+
+- **Temporary files** live only in one ignored directory per task: `.tmp/<task-slug>/` (`engineering-workflow` uses `.tmp/agent-workflows/<task-slug>/`). Never write to the `.tmp/` root or to tracked paths. Keep at most `plan.md`, one `review-<n>.md` per review and one compact verification summary (commands, exit codes, pass/fail counts, short failure excerpts). Do not save full test-runner JSON, duplicate logs, source snapshots or diff copies; Git already holds them. Overwrite your own working files instead of versioning them; only reviewer reports stay immutable.
+- **Cleanup:** at the end of the task, list what remains in its `.tmp` directory and delete it once the handoff is delivered; if deletion is blocked, say so. Never read or reuse another task's `.tmp` directory unless asked.
+- **Permanent docs:** create a new Markdown file only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. No per-round, per-review or per-checkpoint reports in `docs/`, and no run logs appended to `docs/verification.md` (it owns commands). A durable human decision gets one short entry in `docs/decisions/` (context, decision, consequences; one page at most).
+- **Size limits:** plan ≤200 lines; review = findings only, ≤150 lines; decision entry ≤1 page. Needing more is a signal to split the task.
+- **Reading budget:** read *Start here* plus the task's row in the reading matrix, then only what the code leads you to. `docs/audits/` and `docs/archive/` are historical: open a file there only when the task names it. Never read whole folders "for context".
+- **Finish report** lists every file created, kept or deleted, including temporary ones.
 
 ## Agent Workflow & Skill Routing
 
