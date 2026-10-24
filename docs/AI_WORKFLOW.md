@@ -6,7 +6,7 @@ AI tools help inspect code, trace transaction boundaries, draft changes and run 
 
 ## Work loop
 
-1. **Inspect.** Read the [task matrix](AGENT_START_HERE.md), Git status, owning documents and executable code. Identify current versus historical behavior.
+1. **Inspect.** Classify the [task size](../AGENTS.md#task-size), then read what it requires, Git status and executable code. Identify current versus historical behavior.
 2. **Define.** State the concrete outcome, affected invariant and risk-based verification scope. For a race, name both competing transactions and the expected committed result.
 3. **Change.** Make the smallest diff. Preserve hand-written migrations, provider/API idempotency, ledger business references and ownership checks.
 4. **Verify.** Follow the [risk-based verification commands](verification.md#risk-based-verification), including isolated Docker integration for affected infrastructure boundaries. Observe UI behavior separately when it changes. Report PASS, FAIL or NOT RUN with evidence and reasons; unit mocks do not verify database locks or service integration.
