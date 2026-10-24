@@ -21,7 +21,16 @@ Read what your [task size](../AGENTS.md#task-size) requires. This checkout follo
 
 API code paths above are relative to `apps/api/src/` unless stated otherwise. Test claims against `apps/api/test/`. The immutable triggers and functional indexes in SQL exceed what the Drizzle schema describes.
 
-F01 accounting work (capture allocation and the B-series checkpoints) is dormant: no scope is ACTIVE, dormant writers are not a runtime cutover, and legacy settlement/refund/dispute/payout semantics are unchanged. Records in `docs/audits/` are historical; open one only when the task names it. [Human decisions](audits/h1-fix-02-b3-2-human-decisions.md) is the approved policy summary.
+F01 accounting work (capture allocation and the B-series checkpoints) is dormant: no scope is ACTIVE, dormant writers are not a runtime cutover, and legacy settlement/refund/dispute/payout semantics are unchanged. Records in `docs/audits/` are historical; open one only when the task names it. Approved policy that still governs it is listed under [Approved decision records](#approved-decision-records).
+
+## Approved decision records
+
+Most of `docs/audits/` is historical and opt-in. These records are approved policy, not history: T2 work on capture, ledger, refunds, disputes, settlement, payout, receipts/inbox or provider evidence must read the parts relevant to the invariant it touches.
+
+- [Approved capture accounting contract](audits/h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09) — allocation, lots and accounting semantics approved for F01 (§16 only).
+- [B3.2 human architecture decisions](audits/h1-fix-02-b3-2-human-decisions.md) — H01–H12 rollout, admission, writer, payout and evidence-gate choices, plus D01.
+
+New approved decisions go to `docs/decisions/` and are added to this list.
 
 ## Evidence to preserve
 

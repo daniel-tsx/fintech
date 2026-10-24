@@ -47,7 +47,7 @@ Start with the [project overview](../README.md). Each document below owns its na
 
 ## Audit evidence
 
-Historical review and checkpoint records from the H1 Fix 02 workflow experiments live in [`audits/`](audits/). They are not current instructions; open one only when a task names it. The [human decisions](audits/h1-fix-02-b3-2-human-decisions.md) record is the approved policy summary. New durable decisions go in `decisions/` as short entries.
+Historical review and checkpoint records from the H1 Fix 02 workflow experiments live in [`audits/`](audits/). They are not current instructions; open one only when a task names it. Two of them are approved policy rather than history; they are listed under [approved decision records](AGENT_START_HERE.md#approved-decision-records). New durable decisions go in `decisions/` as short entries.
 
 ## Historical material
 

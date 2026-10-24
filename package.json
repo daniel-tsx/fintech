@@ -17,7 +17,7 @@
     "test": "pnpm -r test",
     "test:integration": "pnpm --filter @fintech-lab/api test:integration",
     "test:integration:docker": "node scripts/test-integration-docker.mjs",
-    "test:verification": "node --test scripts/test-integration-docker.test.mjs",
+    "test:verification": "node --test scripts/test-integration-docker.test.mjs scripts/check-migration-history.test.mjs",
     "db:generate": "pnpm --filter @fintech-lab/api db:generate",
     "db:migrate": "pnpm --filter @fintech-lab/api db:migrate",
     "db:seed": "pnpm --filter @fintech-lab/api db:seed"
