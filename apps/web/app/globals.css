@@ -13,6 +13,7 @@
   --ink-2: oklch(47% .02 260);
   --rule: oklch(91% .008 260);
   --rule-strong: oklch(84% .01 260);
+  --rule-control: oklch(62% .015 260); /* form control edges, ≥ 3:1 on paper and surface */
   --accent: oklch(47% .2 285);
   --accent-tint: oklch(97% .015 285);
   --focus: var(--accent);
@@ -117,6 +118,7 @@ main {
   background: var(--paper);
 }
 main:focus { outline: none; }
+main > * { max-width: 1680px; } /* keep rows readable on very wide screens */
 
 .sidebar {
   position: sticky;
@@ -264,6 +266,7 @@ main:focus { outline: none; }
 .evidence-pane > header > a { color: var(--accent); font-size: var(--text-sm); }
 .evidence-pane > header > a:hover { text-decoration: underline; }
 .pane-body { min-width: 0; }
+.mono-link, .clear-link, .evidence-pane > header > a, .heading-actions a, .pager a { display: inline-flex; align-items: center; min-height: 24px; }
 .pane-note { margin: 0; padding: var(--space-2) var(--space-4) var(--space-3); color: var(--ink-2); font-size: var(--text-sm); }
 .heading-actions { display: flex; align-items: center; gap: var(--space-3); }
 .heading-actions a { color: var(--accent); font-size: var(--text-sm); }
@@ -408,7 +411,7 @@ tbody tr:hover td { background: var(--accent-tint); }
 .filter-form input, .filter-form select, .filter-form button {
   height: 32px;
   padding: 0 var(--space-3);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule-control);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
@@ -442,8 +445,8 @@ th[aria-sort] .sort-link { color: var(--ink); }
 .copy-button {
   display: inline-grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: var(--radius);
@@ -554,13 +557,35 @@ th[aria-sort] .sort-link { color: var(--ink); }
 .skeleton-rows { display: grid; gap: var(--space-3); padding: var(--space-4); }
 .skeleton-rows i { height: 18px; }
 
-/* ---------- Motion ---------- */
+/* ---------- Motion: only where it explains a change ---------- */
+@keyframes enter { from { opacity: 0; translate: 0 4px; } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes loading { 50% { opacity: .55; } }
+@keyframes waiting { 50% { box-shadow: 0 0 0 6px var(--accent-tint); } }
+
+/* Loading → content: a route's content settles in once; filter changes re-render in place without it. */
+main > * { animation: enter var(--dur-base) var(--ease-out) both; }
+.skeleton { animation: none; }
+.skeleton i { animation: loading 1.2s ease-in-out infinite; }
+/* The open step of a workflow is waiting for something. */
+.trace-active .trace-node { animation: waiting 2.4s ease-in-out infinite; }
+.palette[open] { animation: enter var(--dur-fast) var(--ease-out); }
+.palette[open]::backdrop { animation: fade var(--dur-fast) var(--ease-out); }
+tbody td, .facet a, .copy-button { transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *, *::before, *::after, *::backdrop {
     scroll-behavior: auto !important;
-    transition-duration: 0s !important;
-    animation-duration: 0s !important;
+    transition: none !important;
+    animation: none !important;
   }
+}
+
+/* Windows high contrast: colour and box-shadow indicators disappear, so draw outlines instead. */
+@media (forced-colors: active) {
+  .nav-group a[aria-current="page"], .facet a[aria-current="true"], .palette li[aria-selected="true"] { outline: 2px solid CanvasText; outline-offset: -2px; }
+  .status { border: 1px solid CanvasText; }
+  .balance-strip .balance-primary { border-left: 2px solid CanvasText; }
 }
 
 /* ---------- Responsive ---------- */
@@ -571,7 +596,29 @@ th[aria-sort] .sort-link { color: var(--ink); }
   .app-shell { display: block; }
   .sidebar { position: static; height: auto; padding: var(--space-3) var(--space-4) 0; }
   .brand-link { padding: 0 0 var(--space-2); }
-  .sidebar nav { flex-direction: row; gap: var(--space-1); margin: 0 calc(-1 * var(--space-4)); padding: 0 var(--space-4) var(--space-2); overflow-x: auto; scrollbar-width: none; }
+  .sidebar nav {
+    flex-direction: row;
+    gap: var(--space-1);
+    padding-bottom: var(--space-2);
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Edge shadows say more links are off-screen; the current link scrolls into view (NavLink). */
+    background:
+      linear-gradient(to right, var(--chrome) 30%, transparent) left / 32px 100% no-repeat local,
+      linear-gradient(to left, var(--chrome) 30%, transparent) right / 32px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, oklch(100% 0 0 / .18), transparent) left / 10px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, oklch(100% 0 0 / .18), transparent) right / 10px 100% no-repeat scroll;
+  }
+  /* Keep each row identifiable while scrolling wide tables sideways. */
+  .table-scroll { scroll-padding-left: 140px; }
+  .table-scroll table:not(.journal-table) :is(th, td):first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+    box-shadow: inset -1px 0 0 var(--rule);
+  }
+  .table-scroll tbody tr:hover td:first-child { background: var(--accent-tint); }
   .nav-group { flex-direction: row; gap: var(--space-1); }
   .nav-group > span, .sidebar footer { display: none; }
   .nav-group a { white-space: nowrap; }
