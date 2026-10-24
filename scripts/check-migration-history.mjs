@@ -26,8 +26,12 @@ export function checkMigrationHistory(base, head) {
   old.forEach((entry, i) => {
     if (!isDeepStrictEqual(entry, next[i])) problems.push(`Journal entry ${i} (${entry.tag}) was changed, removed or reordered`);
   });
+  let latest = Math.max(0, ...old.map((entry) => entry.when ?? 0));
   for (let i = old.length; i < next.length; i++) {
     const entry = next[i];
+    // drizzle-orm's migrator silently skips an entry whose `when` is not newer than the last applied one.
+    if (!(entry.when > latest)) problems.push(`New journal entry ${entry.tag} has when ${entry.when}, which must be greater than ${latest}`);
+    latest = Math.max(latest, entry.when ?? 0);
     if (entry.idx !== i) problems.push(`New journal entry ${entry.tag} has idx ${entry.idx}, expected ${i}`);
     if (!head.has(`${DIR}/${entry.tag}.sql`)) problems.push(`New journal entry ${entry.tag} has no ${DIR}/${entry.tag}.sql`);
   }

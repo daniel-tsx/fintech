@@ -1,12 +1,21 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 let activeChild;
+
+// Integration specs write staged migrations and evidence files directly into the `.tmp/` root.
+// Only new entries with these spec-generated name shapes are attributed to a run; task
+// directories, worktrees and other verification projects are never touched.
+const SPEC_ARTIFACT = /-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|-db\.txt$|-committed\.json$/;
+export function specArtifacts(before, after, project) {
+  return after.filter((name) => !before.has(name) && name !== project
+    && !name.startsWith('fintech-verify-') && SPEC_ARTIFACT.test(name));
+}
 let interrupted = false;
 
 function command(file, args, { capture = false, env = process.env, cleanup = false } = {}) {
@@ -30,14 +39,15 @@ function command(file, args, { capture = false, env = process.env, cleanup = fal
 }
 
 // Inject only command execution for tests; all resource identities are generated here.
-export async function verifyIntegration({ run = command, env = process.env, log = console.log } = {}) {
+export async function verifyIntegration({ run = command, env = process.env, log = console.log, tmpRoot = join(root, '.tmp') } = {}) {
   const project = `fintech-verify-${randomUUID()}`;
   const compose = ['compose', '-p', project, '-f', join(root, 'docker-compose.yml'),
     '-f', join(root, 'docker-compose.integration.yml')];
   const composeRun = (args, options) => run('docker', [...compose, ...args], options);
-  const directory = join(root, '.tmp', project);
+  const directory = join(tmpRoot, project);
   const resultFile = join(directory, 'jest.json');
   let started = false;
+  let before;
   let stage = 'Docker availability';
   let status = 0;
   log(`Verification project: ${project}`);
@@ -61,6 +71,7 @@ export async function verifyIntegration({ run = command, env = process.env, log 
     assert(pg.environment.POSTGRES_USER === 'fintech' && pg.environment.POSTGRES_PASSWORD === 'fintech'
       && pg.environment.POSTGRES_DB === 'fintech_lab', 'Use the checked-in disposable fixture credentials');
     await mkdir(directory, { recursive: true });
+    before = new Set(await readdir(tmpRoot));
     const emptyEnv = join(directory, 'empty.env');
     await writeFile(emptyEnv, '', { flag: 'wx' });
     stage = 'Docker startup';
@@ -85,7 +96,7 @@ export async function verifyIntegration({ run = command, env = process.env, log 
     await pnpm(['test:integration', '--json', '--outputFile', resultFile, '--cacheDirectory', join(directory, 'jest-cache')]);
     const result = JSON.parse(await readFile(resultFile, 'utf8'));
     assert(result.success && result.numPassedTests > 0 && result.numFailedTests === 0, 'No passing test evidence');
-    log(`PASS integration tests: ${result.numPassedTests} passed, ${result.numPendingTests} skipped; evidence: ${resultFile}`);
+    log(`PASS integration tests: ${result.numPassedTests} passed, ${result.numPendingTests} skipped`);
   } catch (error) {
     status = stage === 'Docker availability' ? 2 : 1;
     log(`${status === 2 ? 'NOT RUN' : 'FAIL'} ${stage}: ${error.message}`);
@@ -99,6 +110,18 @@ export async function verifyIntegration({ run = command, env = process.env, log 
         status = 1;
         log(`FAIL cleanup for ${project}: ${error.message}; retry this project's compose down --volumes only`);
       }
+    }
+    if (before) {
+      // Gather this run's spec byproducts; delete everything on success, keep it all on failure.
+      const swept = specArtifacts(before, await readdir(tmpRoot), project);
+      if (swept.length) {
+        await mkdir(join(directory, 'artifacts'), { recursive: true });
+        for (const name of swept) await rename(join(tmpRoot, name), join(directory, 'artifacts', name));
+      }
+      if (status === 0) {
+        await rm(directory, { recursive: true, force: true });
+        log(`PASS artifacts: removed this run's Jest output and ${swept.length} spec artifact(s)`);
+      } else log(`Kept this run's evidence and ${swept.length} spec artifact(s) for investigation: ${directory}`);
     }
   }
   return status;
