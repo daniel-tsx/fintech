@@ -68,7 +68,7 @@ jobs:
             fi
           }
           sync t2-area "$T2" "Touches a T2 area: read carefully"
-          sync guard-change "$GUARD" "Changes CI or a guard script: independent review
+          sync guard-change "$GUARD" "Changes CI or a guard script: independent review"
 
   node:
     name: Node ${{ matrix.node }} checks
