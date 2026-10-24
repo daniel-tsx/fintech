@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Wordmark } from './console';
+import { NavLink } from './nav-link';
 
 const groups = [
   { label: 'flow', items: [['Overview', '/'], ['Payments', '/payments'], ['Ledger', '/ledger']] },
@@ -8,5 +9,5 @@ const groups = [
 ];
 
 export function Sidebar() {
-  return <aside className="sidebar"><Link href="/" className="brand-link"><Wordmark /></Link><nav>{groups.map((group) => <div className="nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}</div>)}</nav><footer><span><i className="live-dot" aria-hidden /> External PSP lab</span><small>Stripe-shaped · no real money</small></footer></aside>;
+  return <aside className="sidebar"><Link href="/" className="brand-link"><Wordmark /></Link><nav aria-label="Main">{groups.map((group) => <div className="nav-group" key={group.label}><span>{group.label}</span>{group.items.map(([label, href]) => <NavLink key={href} href={href} label={label} />)}</div>)}</nav><footer><span>External PSP lab</span><span>Stripe-shaped · no real money</span></footer></aside>;
 }
