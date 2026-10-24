@@ -14,7 +14,7 @@ This is a portfolio/reference payment platform. Financial correctness takes prio
 | --- | --- | --- | --- | --- | --- |
 | **T0 trivial** | Copy, typo, label/style, comment or doc wording; no behavior change | This file and the touched files | None | Cheapest relevant check for the touched package | Re-read the diff |
 | **T1 standard** | Bug fix, UI change, small feature or refactor outside T2 areas | T0 + `package.json`, the code entry points of the [reading matrix](docs/AGENT_START_HERE.md) row, and the one document owning the behavior you change | `ponytail`; `systematic-debugging` when the cause is unknown | [Verification commands](#verification-commands) for the touched package | `ponytail-review` of your own diff |
-| **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, provider integration, data deletion, security | T1 + `README.md` and every document in the matrix row | T1 skills, `grilling` for unresolved decisions, `supabase-postgres-best-practices` for SQL | T1 + Docker integration for the affected boundary | Independent reviewer (see Review below) |
+| **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, provider integration, data deletion, security | T1 + `README.md`, every document in the matrix row and the [approved decision records](docs/AGENT_START_HERE.md#approved-decision-records) for that area | T1 skills, `grilling` for unresolved decisions, `supabase-postgres-best-practices` for SQL | T1 + Docker integration for the affected boundary | Independent reviewer (see Review below) |
 
 Skill text saying "non-trivial" means T1 or T2. A bug with an unknown cause takes the size of the area it is in. `engineering-workflow` runs only when the user asks for it, normally for T2. `docs/README.md` is a navigation index, not required reading.
 
@@ -69,11 +69,11 @@ Report each check as PASS, FAIL or NOT RUN with command, scope, counts and reaso
 
 Default to creating no new files. The deliverable is the code and tests the task needs; plans, reviews and evidence go in the chat, commit message or PR description.
 
-- **Temporary files** live only in one ignored directory per task: `.tmp/<task-slug>/` (`engineering-workflow` uses `.tmp/agent-workflows/<task-slug>/`). Never write to the `.tmp/` root or to tracked paths. Keep at most `plan.md`, one `review-<n>.md` per review and one compact verification summary (commands, exit codes, pass/fail counts, short failure excerpts). Do not save full test-runner JSON, duplicate logs, source snapshots or diff copies; Git already holds them. Overwrite your own working files instead of versioning them; only reviewer reports stay immutable.
-- **Cleanup:** at the end of the task, list what remains in its `.tmp` directory and delete it once the handoff is delivered; if deletion is blocked, say so. Never read or reuse another task's `.tmp` directory unless asked.
+- **Temporary files** live only in one ignored directory per task: `.tmp/<task-slug>/` (`engineering-workflow` uses `.tmp/agent-workflows/<task-slug>/`). Never write to the `.tmp/` root or to tracked paths. Keep at most `plan.md`, one `review-<n>.md` per review, one compact verification summary (commands, exit codes, pass/fail counts, short failure excerpts) and, for `engineering-workflow`, its `state.json`. A task worktree (`.tmp/<task-slug>/worktree`) is a checkout, not an artifact: remove it only with `git worktree remove` after its branch is merged or abandoned. Do not save full test-runner JSON, duplicate logs, source snapshots or diff copies; Git already holds them. Overwrite your own working files instead of versioning them; only reviewer reports stay immutable.
+- **Cleanup:** a task's `.tmp` files are its resume source. Delete them only when the task is finalized (PR merged or rejected, or the human approved or rejected the result and the handoff is delivered) or the user explicitly abandons it. A paused or `HUMAN_APPROVAL` workflow is not finalized. At the end of each session, list what remains and why; if deletion is blocked, say so. Never read or reuse another task's `.tmp` directory unless asked; resuming a named workflow counts as asked.
 - **Permanent docs:** create a new Markdown file only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. No per-round, per-review or per-checkpoint reports in `docs/`, and no run logs appended to `docs/verification.md` (it owns commands). A durable human decision gets one short entry in `docs/decisions/` (context, decision, consequences; one page at most).
 - **Size limits:** plan ≤200 lines; review = findings only, ≤150 lines; decision entry ≤1 page. Needing more is a signal to split the task.
-- **Reading budget:** read what your [task size](#task-size) requires, then only what the code leads you to. `docs/audits/` and `docs/archive/` are historical: open a file there only when the task names it. Never read whole folders "for context".
+- **Reading budget:** read what your [task size](#task-size) requires, then only what the code leads you to. `docs/audits/` and `docs/archive/` are historical and opt-in, except the [approved decision records](docs/AGENT_START_HERE.md#approved-decision-records): T2 work touching their invariants must read the relevant one. Do not browse the rest unless the task names a file. Never read whole folders "for context".
 - **Finish report** lists every file created, kept or deleted, including temporary ones.
 
 ## Agent Workflow & Skill Routing
@@ -100,11 +100,11 @@ When the host provides them, use `vercel-react-best-practices` for T1/T2 React/N
 ## Git and PRs
 
 - One branch per task from current `main`, named `type/short-slug` (`feat/`, `fix/`, `chore/`, `docs/`). Never commit to `main`. When another agent uses the main checkout, work in a separate worktree under `.tmp/<task-slug>/`.
-- Commit locally on the task branch when a checkpoint passes its checks, using Conventional Commits. `engineering-workflow` runs keep their own no-automatic-commit rule.
+- Commit locally on the task branch when a checkpoint passes its checks, using Conventional Commits. A user instruction not to commit overrides this, and `engineering-workflow` runs keep their own no-automatic-commit rule.
 - Push, PR creation and merge need explicit user authorization in the session. Merging is always the human's decision: squash merge after required checks pass.
 - Fill the PR description from the [template](.github/pull_request_template.md): size, invariants touched, checks with PASS/FAIL/NOT RUN, unverified boundaries, review and temporary files. Evidence lives there, not in `docs/`.
-- Hosted CI counts only for the exact head SHA, read from the run (for example `gh pr checks`); never infer it from local runs.
-- Existing migrations are append-only: CI rejects PRs that modify, rename or delete files in `apps/api/drizzle/` outside `meta/`.
+- Hosted CI counts only for the exact head SHA, read from the run (for example `gh pr checks`); never infer it from local runs. It is a merge gate, not a pre-PR gate: before a push it is reported as NOT RUN.
+- Existing migrations are append-only: CI (`scripts/check-migration-history.mjs`) rejects PRs that modify, rename or delete an existing SQL migration or snapshot, or change, remove or reorder an existing journal entry. New migrations, snapshots and appended journal entries pass.
 
 ## Finish
 

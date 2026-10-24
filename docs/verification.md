@@ -118,7 +118,7 @@ pnpm test:verification
 pnpm test:integration:docker
 ```
 
-`test:verification` runs regression checks for the runner's isolation (including the existing dotenv loader), failure handling and evidence reporting; it does not start Docker. `test:integration:docker` reuses [development Compose](../docker-compose.yml) with a [verification-only port override](../docker-compose.integration.yml). The override requires [Compose 2.24.4+](https://docs.docker.com/reference/compose-file/merge/#replace-value). Development ports/volumes remain unchanged.
+`test:verification` runs the migration-history guard's regression tests and regression checks for the runner's isolation (including the existing dotenv loader), failure handling and evidence reporting; it does not start Docker. `test:integration:docker` reuses [development Compose](../docker-compose.yml) with a [verification-only port override](../docker-compose.integration.yml). The override requires [Compose 2.24.4+](https://docs.docker.com/reference/compose-file/merge/#replace-value). Development ports/volumes remain unchanged.
 
 The runner generates a fresh `fintech-verify-<UUID>` project, starts only PostgreSQL on a dynamically allocated **127.0.0.1** port, and rejects shared/external volumes, bind mounts and explicit container names. It overrides inherited database/admin URLs with the run's disposable fixture URLs and neutralizes inherited dotenv file/override/vault settings using a run-owned empty file. It enables database/migration tests, runs existing `pnpm db:migrate` followed by `pnpm test:integration`, and saves Jest JSON/cache under ignored `.tmp/<project>/`. The root `test:integration` command delegates to the existing API script; existing Jest options and native database commands below remain available.
 
@@ -263,7 +263,7 @@ For failure simulation run `pnpm --filter @fintech-lab/api test:unit` and use th
 
 - Node 22/24 jobs: `node scripts/sync-agent-skills.mjs --check` before dependency installation, then frozen install, `pnpm test:verification`, lint, unit/default tests, build, typecheck.
 - Node 24 integration job: fresh PostgreSQL 17 service container, frozen install, `pnpm db:migrate` and `pnpm test:integration` with `RUN_DB_TESTS=1`, `RUN_MIGRATION_TESTS=1` and `MIGRATION_ADMIN_URL` pointing only to that service. Its fixture admin can create databases/roles; publisher/worker assertions use restricted non-owner roles. Suites close connections and retain immutable fixture history locally; CI service disposal removes the job's isolated databases/roles. No seed, Redis or RabbitMQ is needed.
-- Pull-request migration guard: fails when the PR modifies, renames or deletes an existing file in `apps/api/drizzle/` outside `meta/`; new forward migrations are allowed.
+- Pull-request migration guard (`node scripts/check-migration-history.mjs <base> HEAD`): fails when an existing SQL migration or snapshot is modified, renamed or deleted, or an existing journal entry is changed, removed or reordered; appended migrations, snapshots and journal entries pass. Its regression tests run in `pnpm test:verification`.
 
 Jobs have read-only repository permissions and use no repository/service secrets. The workflow follows the official [PostgreSQL service-container guide](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers) and [pnpm action setup](https://github.com/pnpm/action-setup).
 

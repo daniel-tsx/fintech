@@ -22,8 +22,8 @@
 
 ## Review
 
-<!-- T1: self-review with ponytail-review. T2: independent reviewer (who/what ran it) and a summary of findings and their disposition. -->
+<!-- T1: self-review with ponytail-review. T2: independent reviewer (who/what ran it) and a summary of findings and their disposition. engineering-workflow runs: task slug and final verdict. -->
 
 ## Docs and temporary files
 
-<!-- Owning documents updated, or why none needed. Temporary files left under .tmp/<task-slug>/, or "cleaned". -->
+<!-- Owning documents updated, or why none needed. What remains under .tmp/<task-slug>/ (kept until merge or rejection), or "none". Approved decision records consulted (T2). -->

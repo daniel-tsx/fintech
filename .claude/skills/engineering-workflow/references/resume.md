@@ -72,4 +72,4 @@ For implementation mode, an approved operator may choose `PLAN` or `VERIFY` depe
 3. Test artifacts must contain independently checked commands, environment, exit codes, skip/fail accounting, and applicable final database state. `AUTHOR_REPORTED` and `NOT_RUN` cannot satisfy mandatory gates.
 4. Correction budget is two total automatic fix waves per task; `init` and `rebaseline` do not reset it.
 5. Any failure to validate state, files, gitignored boundaries, recorded hashes, or permissions **fails closed** and must not advance the workflow.
-6. Do not serialize secrets or large customer payloads; keep temporary artifacts gitignored and clean them only after the required handoff is preserved.
+6. Do not serialize secrets or large customer payloads; keep temporary artifacts gitignored and clean them only after the workflow is finalized or explicitly abandoned (SKILL.md step 3).

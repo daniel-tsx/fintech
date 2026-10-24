@@ -25,16 +25,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Reject edits to existing migrations
+      - name: Reject edits to existing migrations, snapshots or journal entries
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          changed=$(git diff --name-status --diff-filter=DMRT "$BASE_SHA" HEAD -- apps/api/drizzle ':(exclude)apps/api/drizzle/meta')
-          if [ -n "$changed" ]; then
-            echo "::error::Existing migrations are append-only. Add a new forward migration instead:"
-            echo "$changed"
-            exit 1
-          fi
+        run: node scripts/check-migration-history.mjs "$BASE_SHA" HEAD
 
   node:
     name: Node ${{ matrix.node }} checks

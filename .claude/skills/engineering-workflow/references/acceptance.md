@@ -4,7 +4,7 @@
 
 - Freeze scope and revision (BASE + commit SHA when committed + staged/unstaged diff fingerprint + untracked file inventory). If files changed after review, invalidate and rerun applicable checks/review.
 - Confirm independently approved plan and implementation (unless explicit DESIGN_ONLY), exact acceptance assertions, required passing checks, relevant DB/upgrade/concurrency tests, source/permission invariants, and complete accounted skip/failure list.
-- A check marked `NOT_RUN`, `BLOCKED_ENVIRONMENT` or `AUTHOR_REPORTED` does not satisfy a mandatory gate. Hosted CI is a separate gate from local Docker/Postgres; do not claim success without its result for the exact SHA.
+- A check marked `NOT_RUN`, `BLOCKED_ENVIRONMENT` or `AUTHOR_REPORTED` does not satisfy a mandatory gate. Hosted CI is a separate gate from local Docker/Postgres; do not claim success without its result for the exact SHA. Workflows do not push, so at `FINAL_GATE` hosted CI is reported as `NOT_RUN`: it is not a mandatory gate for `READY_FOR_HUMAN_APPROVAL`, but it must pass on the PR before merge.
 - Inspect dirty worktree and ensure generated/temp/secret files are not staged. Keep review artifacts in existing `.tmp/agent-workflows/<task>/` and preserve significant tests in version control. Only durable design/contracts/operations belong in canonical docs.
 
 ## Verdicts and permissions
