@@ -4,6 +4,14 @@
 
 <!-- One or two sentences. Link the issue or decision if there is one. -->
 
+## Review guide
+
+<!-- Where the human reviewer should spend attention:
+- Read carefully: files/functions that carry the risk, and why.
+- Skim: mechanical changes (renames, formatting, generated code, fixtures).
+- Least confident about: …
+- Tests removed, weakened or skipped: list each with the reason, or "none". -->
+
 ## Task size
 
 <!-- T0 / T1 / T2 (see AGENTS.md#task-size). For T2, name each financial invariant touched and its transaction boundary. -->
