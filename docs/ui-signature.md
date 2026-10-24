@@ -67,6 +67,15 @@ Rules the UI must not blur:
 - The ledger groups lines by journal with debit and credit totals. When the API's 500-line limit is reached, the oldest journal is marked as possibly incomplete instead of showing a misleading total.
 - A filtered list with no rows says so and offers "Clear filters"; an empty register describes the next event that will fill it.
 
+## Detail and overview
+
+- **Payment detail** reads top to bottom: heading (full ID with copy, state, amount, link to its audit entries), the five amounts, then *Lifecycle* (the `TraceRail` built from audit events) beside *Where the money is*, then attempts, refunds, journals (`JournalTable`, shared with the ledger) and related disputes and reconciliation issues.
+- *Where the money is* lists authorized, captured and refunded amounts from the API. Settled and paid out show "not reported", because the payment API does not link a payment to a settlement batch or payout; the UI never infers them.
+- The trace ends with an active step only while the workflow is open. `REQUIRES_AUTHORIZATION` and `CAPTURE_PENDING` read "outcome unknown … not a failure".
+- Audit metadata is shown as `key value` pairs; `amount`, `gross`, `fee` and `net` are treated as minor units and formatted in the record's currency.
+- A malformed or unknown payment ID renders the 404 page, not an error.
+- **Overview** shows one balance strip per currency (available: settled, eligible for payout; pending: captured, awaiting settlement), the latest payments, and an attention list counted from real records (dead, retrying or exception webhook events, open reconciliation issues, open disputes), each linking to the filtered register. It states which records it checked and which could not be loaded; there is no derived "system healthy" claim.
+
 ## Density, shape and motion
 
 - Table cells pad 8px × 12px (about 34px rows); panes use 2px corners and 1px rules, no drop shadows.

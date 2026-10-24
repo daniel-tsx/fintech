@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { formatAmount, formatMoney, formatTime } from '@/lib/format';
 import { currentSort, hrefWith, type SearchParams } from '@/lib/list';
-import { describeStatus, glyphs, type StatusOf } from '@/lib/status';
+import { describeStatus, glyphs, type StatusOf, type Tone } from '@/lib/status';
 import { CopyButton } from './copy-button';
 
 export function Wordmark() {
@@ -15,20 +15,25 @@ export function EvidencePane({ label, title, action, children, className = '' }:
 
 export function Status({ value, of }: { value: string; of?: StatusOf }) {
   const { tone, label } = describeStatus(value, of);
-  return <span className={`status tone-${tone}`} title={value}><span aria-hidden>{glyphs[tone]}</span>{label}</span>;
+  return <Chip tone={tone} label={label} title={value} />;
+}
+
+/** A status chip for states that are not a raw API value (for example "not reported"). */
+export function Chip({ tone, label, title }: { tone: Tone; label: string; title?: string }) {
+  return <span className={`status tone-${tone}`} title={title}><span aria-hidden>{glyphs[tone]}</span>{label}</span>;
 }
 
 export interface Balance { currency: string; pending: string; available: string }
+/** One strip per currency. Pending (captured, not settled) and available (settled, not paid out) never merge. */
 export function BalanceStrip({ balances }: { balances: Balance[] }) {
-  const balance = balances[0] ?? { currency: 'USD', pending: '0', available: '0' };
-  return <div className="balance-strip" aria-label="Merchant balances">
-    <div className="balance-primary"><span className="micro-label">available / {balance.currency}</span><strong>{formatMoney(balance.available, balance.currency)}</strong><small>eligible for payout</small></div>
-    <div><span className="micro-label">pending / {balance.currency}</span><strong>{formatMoney(balance.pending, balance.currency)}</strong><small>awaiting settlement</small></div>
-    <div><span className="micro-label">rail state</span><strong className="text-value">Operational</strong><small>inbox + outbox active</small></div>
-  </div>;
+  if (!balances.length) return <p className="inline-empty balance-empty">No balance yet. A confirmed capture creates pending money.</p>;
+  return <div className="balance-list">{balances.map((balance) => <div key={balance.currency} className="balance-strip" aria-label={`${balance.currency} balances`}>
+    <div className="balance-primary"><span className="micro-label">available · {balance.currency}</span><strong title={`${balance.available} minor units`}>{formatMoney(balance.available, balance.currency)}</strong><small>settled, eligible for payout</small></div>
+    <div><span className="micro-label">pending · {balance.currency}</span><strong title={`${balance.pending} minor units`}>{formatMoney(balance.pending, balance.currency)}</strong><small>captured, awaiting settlement</small></div>
+  </div>)}</div>;
 }
 
-export interface TraceItem { label: string; detail: string; at?: string | null; state: 'done' | 'active' | 'waiting' | 'failed' }
+export interface TraceItem { label: string; detail: ReactNode; at?: string | null; state: 'done' | 'active' | 'waiting' | 'failed' }
 export function TraceRail({ items }: { items: TraceItem[] }) {
   return <ol className="trace-rail" aria-label="Payment lifecycle">
     {items.map((item, index) => <li key={`${item.label}-${index}`} className={`trace-${item.state}`}>
@@ -76,7 +81,7 @@ export function Amount({ value, currency }: { value: string; currency: string })
   return <span title={`${value} minor units`}>{formatAmount(value, currency)}</span>;
 }
 
-export function PageHeading({ eyebrow, title, children, action }: { eyebrow: string; title: string; children: ReactNode; action?: ReactNode }) {
+export function PageHeading({ eyebrow, title, children, action }: { eyebrow: ReactNode; title: string; children: ReactNode; action?: ReactNode }) {
   return <header className="page-heading"><div><span className="micro-label">{eyebrow}</span><h1>{title}</h1><p>{children}</p></div>{action}</header>;
 }
 

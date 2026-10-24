@@ -82,6 +82,7 @@ h1, h2, h3 { margin: 0; }
   letter-spacing: .06em;
   text-transform: uppercase;
 }
+.micro-label .verbatim { letter-spacing: 0; text-transform: none; } /* identifiers keep their case */
 
 .sr-only {
   position: absolute;
@@ -263,6 +264,37 @@ main:focus { outline: none; }
 .evidence-pane > header > a { color: var(--accent); font-size: var(--text-sm); }
 .evidence-pane > header > a:hover { text-decoration: underline; }
 .pane-body { min-width: 0; }
+.pane-note { margin: 0; padding: var(--space-2) var(--space-4) var(--space-3); color: var(--ink-2); font-size: var(--text-sm); }
+.heading-actions { display: flex; align-items: center; gap: var(--space-3); }
+.heading-actions a { color: var(--accent); font-size: var(--text-sm); }
+.heading-actions a:hover { text-decoration: underline; }
+
+/* Payment money state: one row per boundary */
+.money-state { margin: 0; padding: var(--space-1) var(--space-4); }
+.money-state > div {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.money-state > div:last-child { border-bottom: 0; }
+.money-state dd { margin: 0; color: var(--ink-2); }
+.money-state dd.numeric { color: var(--ink); text-align: right; }
+.money-state a, .pane-note a { color: var(--accent); }
+
+/* Overview attention queue */
+.attention-list { margin: 0; padding: var(--space-1) 0; list-style: none; }
+.attention-list a {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+.attention-list a:hover { background: var(--accent-tint); }
 
 .overview-grid, .detail-grid {
   display: grid;
@@ -281,7 +313,10 @@ main:focus { outline: none; }
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
 }
-.fact-strip { grid-template-columns: repeat(4, 1fr); }
+.fact-strip { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.balance-strip { grid-template-columns: 1fr 1fr; margin: 0; }
+.balance-list { display: grid; gap: var(--space-2); margin-bottom: var(--space-5); }
+.balance-empty { margin-bottom: var(--space-5); padding-inline: 0; }
 .balance-strip > div, .fact-strip > div {
   display: flex;
   flex-direction: column;
@@ -297,7 +332,6 @@ main:focus { outline: none; }
   letter-spacing: -.02em;
 }
 .fact-strip strong { font-size: var(--text-xl); }
-.balance-strip .text-value { font: 600 var(--text-xl)/1.4 var(--font-sans); }
 .balance-strip small { color: var(--ink-2); font-size: var(--text-sm); }
 .fact-strip span {
   color: var(--ink-2);
@@ -333,6 +367,7 @@ main:focus { outline: none; }
 
 /* ---------- Tables ---------- */
 .table-scroll {
+  position: relative; /* contains absolutely positioned screen-reader text inside the scroll box */
   max-width: 100%;
   overflow-x: auto;
   /* Edge shadows appear only when more columns are scrolled out of view. */
@@ -531,8 +566,6 @@ th[aria-sort] .sort-link { color: var(--ink); }
 /* ---------- Responsive ---------- */
 @media (max-width: 980px) {
   .overview-grid, .detail-grid { grid-template-columns: 1fr; }
-  .balance-strip, .fact-strip { grid-template-columns: 1fr 1fr; }
-  .balance-strip > div:last-child { grid-column: 1 / -1; }
 }
 @media (max-width: 720px) {
   .app-shell { display: block; }
@@ -545,8 +578,10 @@ th[aria-sort] .sort-link { color: var(--ink); }
   .palette-trigger { margin-bottom: var(--space-2); }
   main { padding: var(--space-5) var(--space-4) var(--space-7); }
   .page-heading { flex-direction: column; align-items: flex-start; }
-  .balance-strip, .fact-strip { grid-template-columns: 1fr; }
-  .balance-strip > div:last-child { grid-column: auto; }
+  .balance-strip, .fact-strip { grid-template-columns: 1fr 1fr; }
+  .fact-strip > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .money-state > div { grid-template-columns: 1fr; gap: var(--space-1); }
+  .money-state dd.numeric { text-align: left; }
   .trace-rail li { grid-template-columns: 28px minmax(0, 1fr); }
   .trace-rail time { grid-column: 2; }
 }
