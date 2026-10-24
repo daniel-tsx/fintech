@@ -23,7 +23,7 @@ describeMigration('R0.2 additive delivery migration', () => {
     const db = new DatabaseService(new ConfigService({ DATABASE_URL: url.toString() }));
     clients.push(db); urls.set(db, url.toString()); return db;
   }
-  async function apply(db: DatabaseService, path = folder) {
+  async function apply(db: DatabaseService, path = staged(12)) {
     const sql = postgres(urls.get(db)!, { max: 1 });
     try { await migrate(drizzle(sql), { migrationsFolder: path }); } finally { await sql.end(); }
   }

@@ -11,11 +11,11 @@ import { publishCommandObservation, signedEvidence } from '../support/trusted-ev
 const describeDb = process.env.RUN_DB_TESTS === '1' && process.env.RUN_MIGRATION_TESTS === '1' ? describe : describe.skip;
 describeDb('R2-A additive migration compatibility', () => {
   const folder = resolve(__dirname, '../../drizzle'), harnesses: Awaited<ReturnType<typeof providerObservationHarness>>[] = [];
-  function staged(failure = false) {
+  function staged(failure = false, count = 10) {
     const target = resolve(__dirname, `../../../../.tmp/r2a-migrations-${randomUUID()}`);
     mkdirSync(resolve(target, 'meta'), { recursive: true });
     const journal = JSON.parse(readFileSync(resolve(folder, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
-    journal.entries = journal.entries.filter(e => e.idx < (failure ? 11 : 10));
+    journal.entries = journal.entries.filter(e => e.idx < (failure ? 11 : count));
     writeFileSync(resolve(target, 'meta/_journal.json'), JSON.stringify(journal));
     for (const e of journal.entries) copyFileSync(resolve(folder, e.tag + '.sql'), resolve(target, e.tag + '.sql'));
     if (failure) {
@@ -24,13 +24,13 @@ describeDb('R2-A additive migration compatibility', () => {
     }
     return target;
   }
-  async function setup(source = folder) {
+  async function setup(source = staged(false,12)) {
     const h = await providerObservationHarness(source); harnesses.push(h);
     const url = new URL(process.env.MIGRATION_ADMIN_URL!); url.pathname = '/' + String((await h.db.sql`select current_database() n`)[0].n);
-    async function apply(from = folder) { const sql = postgres(url.toString(), { max: 1 }); try { await migrate(drizzle(sql), { migrationsFolder: from }); } finally { await sql.end(); } }
+    async function apply(from = staged(false,12)) { const sql = postgres(url.toString(), { max: 1 }); try { await migrate(drizzle(sql), { migrationsFolder: from }); } finally { await sql.end(); } }
     return { h, url, apply };
   }
-  afterAll(async () => { for (const h of harnesses) await h.close(); });
+  afterAll(async () => { for (const h of harnesses) await h.close(12); });
   async function fingerprint(sql: Sql) {
     const tables = ['ledger_transactions','ledger_entries','capture_accounting_lots','refund_capture_allocations','provider_financial_observations',
       'provider_financial_receipts','webhook_financial_evidence','provider_command_authorities','provider_command_executions','provider_observation_sources','provider_observation_obligations'];
@@ -93,7 +93,7 @@ describeDb('R2-A additive migration compatibility', () => {
     const sql = postgres(url.toString(), { max: 1 }); let pending: Promise<void> | undefined;
     try {
       await Promise.race([started, first]); const waiter = Number((await sql`select pg_backend_pid() p`)[0].p); expect(waiter).not.toBe(holder);
-      pending = migrate(drizzle(sql), { migrationsFolder: folder }); let observed = false;
+      pending = migrate(drizzle(sql), { migrationsFolder: staged(false,12) }); let observed = false;
       for (let n = 0; n < 150; n++) { if ((await h.db.sql`select ${holder}=any(pg_blocking_pids(${waiter})) b`)[0].b) { observed = true; break; } await delay(20); }
       expect(observed).toBe(true); expect((await h.db.sql`select to_regclass('public.financial_applications') r`)[0].r).toBeNull();
       release(); await Promise.all([first, pending]); await apply();

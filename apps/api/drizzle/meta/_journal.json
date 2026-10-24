@@ -85,6 +85,13 @@
       "when": 1792540800000,
       "tag": "0011_payment_operation_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792627200000,
+      "tag": "0012_shared_payment_proof_envelope",
+      "breakpoints": true
     }
   ]
 }

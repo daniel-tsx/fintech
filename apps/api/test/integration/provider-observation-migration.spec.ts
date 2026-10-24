@@ -11,6 +11,15 @@ import { publishCommandObservation, trustedEvidenceFixture } from '../support/tr
 const describeDb = process.env.RUN_DB_TESTS === '1' && process.env.RUN_MIGRATION_TESTS === '1' ? describe : describe.skip;
 describeDb('D02-A fresh install and conservative 0008 upgrade', () => {
   const databases: DatabaseService[] = [], folder = resolve(__dirname, '../../drizzle');
+  function historical() {
+    const target = resolve(__dirname, `../../../../.tmp/d02-checkpoint-${randomUUID()}`);
+    mkdirSync(resolve(target, 'meta'), { recursive: true });
+    const journal = JSON.parse(readFileSync(resolve(folder, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
+    journal.entries = journal.entries.filter((e: { idx: number }) => e.idx < 12);
+    writeFileSync(resolve(target, 'meta/_journal.json'), JSON.stringify(journal));
+    for (const e of journal.entries) copyFileSync(resolve(folder, e.tag + '.sql'), resolve(target, e.tag + '.sql'));
+    return target;
+  }
   async function isolated() {
     const url = new URL(process.env.MIGRATION_ADMIN_URL!);
     if (!['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error('Disposable local cluster required');
@@ -18,7 +27,7 @@ describeDb('D02-A fresh install and conservative 0008 upgrade', () => {
     try { await admin.unsafe(`create database "${name}"`); } finally { await admin.end(); }
     url.pathname = '/' + name;
     const db = new DatabaseService(new ConfigService({ DATABASE_URL: url.toString() })); databases.push(db);
-    return { db, apply: async (source = folder) => { const sql = postgres(url.toString(), { max: 1 }); try { await migrate(drizzle(sql), { migrationsFolder: source }); } finally { await sql.end(); } } };
+    return { db, apply: async (source = historical()) => { const sql = postgres(url.toString(), { max: 1 }); try { await migrate(drizzle(sql), { migrationsFolder: source }); } finally { await sql.end(); } } };
   }
   afterAll(async () => { for (const db of databases) await db.onApplicationShutdown(); });
   it('installs twelve migrations, narrow NOLOGIN owners and pinned definers with no PUBLIC publication capability', async () => {
