@@ -1,23 +1,52 @@
 import Link from 'next/link';
-import { ApiUnavailableError, api } from '@/lib/api';
-import { formatMoney, formatTime } from '@/lib/format';
-import { Balance, BalanceStrip, ConnectionState, DataTable, EvidencePane, PageHeading, PaymentLink, Status, TraceRail } from '@/components/console';
+import { api, offline } from '@/lib/api';
+import { formatTime } from '@/lib/format';
+import { Amount, type Balance, BalanceStrip, ConnectionState, DataTable, EvidencePane, PageHeading, PaymentLink, Status } from '@/components/console';
 
-interface Payment { id: string; status: string; amount: string; currency: string; capturedAmount: string; createdAt: string }
-interface PaymentList { data: Payment[] }
+interface Payment { id: string; status: string; amount: string; currency: string; createdAt: string }
+interface Attention { label: string; count: number; href: string; status: string }
 
 export const dynamic = 'force-dynamic';
+
+/** Count records in the given states; null when the source could not be loaded. */
+function attention<T>(rows: T[] | null, pick: (row: T) => string, states: string[], label: (state: string) => string, href: (state: string) => string): Attention[] | null {
+  if (!rows) return null;
+  return states.map((state) => ({ label: label(state), count: rows.filter((row) => pick(row) === state).length, href: href(state), status: state })).filter((item) => item.count);
+}
+
 export default async function OverviewPage() {
-  let balances: Balance[]; let payments: Payment[];
-  try { const [balanceResult, paymentResult] = await Promise.all([api<{ data: Balance[] }>('/balances'), api<PaymentList>('/payments?pageSize=8')]); balances = balanceResult.data; payments = paymentResult.data; }
-  catch (error) { if (error instanceof ApiUnavailableError) return <ConnectionState />; throw error; }
-  const latest = payments[0];
-  const trace = latest ? [
-    { label: 'Payment created', detail: 'Merchant intent persisted', at: latest.createdAt, state: 'done' as const },
-    { label: 'Authorization', detail: latest.status === 'CREATED' ? 'Waiting for merchant command' : 'Provider reservation path', state: latest.status === 'CREATED' ? 'active' as const : 'done' as const },
-    { label: 'Capture', detail: 'Provider confirmation posts the journal', state: ['CAPTURED','PARTIALLY_REFUNDED','REFUNDED','DISPUTED'].includes(latest.status) ? 'done' as const : 'waiting' as const },
-    { label: 'Settlement', detail: 'Pending liability moves to available', state: 'waiting' as const },
-    { label: 'Payout', detail: 'Available balance is atomically reserved', state: 'waiting' as const },
-  ] : [];
-  return <><PageHeading eyebrow="merchant clearing desk" title="Money and state, in one trace">Follow each boundary independently: provider state, internal workflow, ledger, settlement, then payout.</PageHeading><BalanceStrip balances={balances} /><div className="overview-grid"><EvidencePane label="latest trace" title={latest ? `Payment ${latest.id.slice(0, 8)}` : 'No payment selected'} action={latest ? <Link href={`/payments/${latest.id}`}>Open evidence →</Link> : undefined}>{latest ? <TraceRail items={trace} /> : <p className="inline-empty">No payments yet. Create a local payment intent to establish the first trace.</p>}</EvidencePane><EvidencePane label="recent intents" title="Payment register"><DataTable empty="No payment intents yet. Create one through the API to populate the register." columns={[{key:'id',label:'payment'},{key:'status',label:'state'},{key:'amount',label:'gross',align:'right'},{key:'created',label:'received'}]} rows={payments.map((payment) => ({ id: <PaymentLink id={payment.id} />, status: <Status value={payment.status} />, amount: formatMoney(payment.amount,payment.currency), created: formatTime(payment.createdAt) }))} /></EvidencePane></div></>;
+  const [balances, payments, webhooks, issues, disputes] = await Promise.all([
+    api<{ data: Balance[] }>('/balances').catch(offline),
+    api<{ data: Payment[] }>('/payments?pageSize=8').catch(offline),
+    api<Array<{ status: string }>>('/webhooks').catch(() => null),
+    api<Array<{ status: string }>>('/reconciliation/issues').catch(() => null),
+    api<Array<{ status: string; outcome?: string }>>('/disputes').catch(() => null),
+  ]);
+  if (!balances || !payments) return <ConnectionState />;
+
+  const sources = [
+    { name: 'webhook events (latest 200)', items: attention(webhooks, (w) => w.status, ['DEAD', 'ACCOUNTING_EXCEPTION', 'RETRY'], (s) => `Webhook events ${s.replaceAll('_', ' ').toLowerCase()}`, (s) => `/webhooks?status=${s}`) },
+    { name: 'reconciliation issues (latest 200)', items: attention(issues, (i) => i.status, ['OPEN'], () => 'Open reconciliation issues', (s) => `/reconciliation?status=${s}`) },
+    { name: 'disputes', items: attention(disputes, (d) => d.outcome ?? d.status, ['OPEN'], () => 'Open disputes', (s) => `/disputes?status=${s}`) },
+  ];
+  const items = sources.flatMap((source) => source.items ?? []);
+  const unavailable = sources.filter((source) => !source.items).map((source) => source.name);
+
+  return <>
+    <PageHeading eyebrow="merchant clearing desk" title="Overview">Balances by currency, records that need a person, and the latest payments. Each boundary is reported separately: provider, workflow, ledger, settlement, payout.</PageHeading>
+    <BalanceStrip balances={balances.data} />
+    <div className="overview-grid">
+      <EvidencePane label="recent intents" title="Latest payments" action={<Link href="/payments">All payments →</Link>}>
+        <DataTable caption="Latest payments" empty="No payment intents yet. Create one through the API to populate the register."
+          columns={[{ key: 'id', label: 'payment' }, { key: 'created', label: 'created (UTC)', mono: true }, { key: 'status', label: 'state' }, { key: 'currency', label: 'ccy', mono: true }, { key: 'amount', label: 'amount', align: 'right' }]}
+          rows={payments.data.map((p) => ({ key: p.id, id: <PaymentLink id={p.id} />, created: formatTime(p.createdAt), status: <Status value={p.status} />, currency: p.currency, amount: <Amount value={p.amount} currency={p.currency} /> }))} />
+      </EvidencePane>
+      <EvidencePane label="needs a person" title="Attention">
+        {items.length
+          ? <ul className="attention-list">{items.map((item) => <li key={item.href}><Link href={item.href}><Status value={item.status} /><span>{item.label}</span><strong className="numeric">{item.count}</strong></Link></li>)}</ul>
+          : <p className="inline-empty">Nothing needs attention in the records checked.</p>}
+        <p className="pane-note">Checks {sources.filter((source) => source.items).map((source) => source.name).join(', ') || 'nothing'}.{unavailable.length ? ` Could not load ${unavailable.join(', ')}.` : ''}</p>
+      </EvidencePane>
+    </div>
+  </>;
 }
