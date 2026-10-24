@@ -50,19 +50,25 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node scripts/check-pr-review-signals.mjs "$BASE_SHA" HEAD
-      - name: Sync t2-area label
+      - name: Sync review labels
         if: ${{ !cancelled() && steps.signals.outputs.t2 != '' && github.event.pull_request.head.repo.full_name == github.repository }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          T2: ${{ steps.signals.outputs.t2 }}
+          GUARD: ${{ steps.signals.outputs.guard }}
         run: |
-          if [ "${{ steps.signals.outputs.t2 }}" = "true" ]; then
-            gh label create t2-area --color B60205 --description "Touches a T2 area: read carefully" --force
-            gh pr edit "$PR" --add-label t2-area
-          else
-            gh pr edit "$PR" --remove-label t2-area || true
-          fi
+          sync() { # label, wanted, description
+            if [ "$2" = "true" ]; then
+              gh label create "$1" --color B60205 --description "$3" --force
+              gh pr edit "$PR" --add-label "$1"
+            else
+              gh pr edit "$PR" --remove-label "$1" || true
+            fi
+          }
+          sync t2-area "$T2" "Touches a T2 area: read carefully"
+          sync guard-change "$GUARD" "Changes CI or a guard script: independent review"
 
   node:
     name: Node ${{ matrix.node }} checks
