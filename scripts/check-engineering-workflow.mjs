@@ -37,4 +37,14 @@ const ledgerScript = (await readFile(join(root, 'scripts/engineering-workflow-st
 for (const marker of ['sourceFingerprint', 'BLOCKED_EVIDENCE_CHANGED', 'correctionRoundsUsed', 'rebaseline']) {
   assert(ledgerScript.includes(marker), `Missing checkpoint/resume guard: ${marker}`);
 }
-console.log('engineering-workflow v1.1: 6 files mirrored; checkpoint/resume guards verified');
+// Other locally authored skills: one SKILL.md each, identical on both hosts.
+for (const name of ['codex-review', 'ship-pr']) {
+  const [a, b] = await Promise.all(['.agents', '.claude'].map(async (host) => {
+    const dir = join(root, host, 'skills', name);
+    assert.deepEqual(await readdir(dir), ['SKILL.md'], `Unexpected files: ${host}/skills/${name}`);
+    return (await readFile(join(dir, 'SKILL.md'), 'utf8')).replaceAll('\r\n', '\n');
+  }));
+  assert.equal(a, b, `Codex and Claude copies differ: ${name}`);
+  assert.match(a, new RegExp(`^---\nname: ${name}\ndescription: .+\n---`), `Bad frontmatter: ${name}`);
+}
+console.log('engineering-workflow v1.1: 6 files mirrored; checkpoint/resume guards verified; codex-review and ship-pr mirrored');
