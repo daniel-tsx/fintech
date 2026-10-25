@@ -19,12 +19,12 @@ describeMigration('P-A forward migration preserves legacy REFUND evidence and gu
     if (failure) { const p=resolve(target,'0012_shared_payment_proof_envelope.sql'); writeFileSync(p,readFileSync(p,'utf8')+"\n--> statement-breakpoint\nDO $$ BEGIN RAISE EXCEPTION 'planned P-A rollback'; END $$;\n"); }
     return target;
   }
-  async function setup(source = folder) {
+  async function setup(source = staged(13)) {
     const h=await providerObservationHarness(source); all.push(h); const url=new URL(process.env.MIGRATION_ADMIN_URL!); url.pathname='/'+String((await h.db.sql`select current_database() n`)[0].n);
-    async function apply(from=folder) { const sql=postgres(url.toString(),{max:1}); try { await migrate(drizzle(sql),{migrationsFolder:from}); } finally { await sql.end(); } }
+    async function apply(from=staged(13)) { const sql=postgres(url.toString(),{max:1}); try { await migrate(drizzle(sql),{migrationsFolder:from}); } finally { await sql.end(); } }
     return {h,url,apply};
   }
-  afterAll(async()=>{for(const h of all)await h.close();});
+  afterAll(async()=>{for(const h of all)await h.close(13);});
   async function legacy(h: Awaited<ReturnType<typeof providerObservationHarness>>) {
     const f=await h.accepted(); await h.db.transaction(tx=>publishCommandObservation(tx,f,'CAPTURE')); await(await f.producer.execute(f.message)).publish();
     await h.db.sql`insert into refund_capture_allocations(refund_id,capture_lot_id,payment_id,merchant_id,currency,reserved_gross) values(${f.operationId},${f.lotId},${f.paymentId},${f.merchantId},'USD',2000)`;
@@ -79,7 +79,7 @@ describeMigration('P-A forward migration preserves legacy REFUND evidence and gu
     const gate=new Promise<void>(r=>{release=r;}),started=new Promise<void>(r=>{ready=r;});
     const first=h.db.transaction(async tx=>{holder=Number((await tx`select pg_backend_pid() p`)[0].p);await tx`lock table financial_application_manifests in row exclusive mode`;ready();await gate;});
     const sql=postgres(url.toString(),{max:1});let pending:Promise<void>|undefined;
-    try{await Promise.race([started,first]);const waiter=Number((await sql`select pg_backend_pid() p`)[0].p);expect(waiter).not.toBe(holder);pending=migrate(drizzle(sql),{migrationsFolder:folder});let observed=false;
+    try{await Promise.race([started,first]);const waiter=Number((await sql`select pg_backend_pid() p`)[0].p);expect(waiter).not.toBe(holder);pending=migrate(drizzle(sql),{migrationsFolder:staged(13)});let observed=false;
       for(let n=0;n<150;n++){if((await h.db.sql`select ${holder}=any(pg_blocking_pids(${waiter})) b`)[0].b){observed=true;break;}await delay(20);}expect(observed).toBe(true);
       expect((await h.db.sql`select exists(select 1 from pg_attribute where attrelid='financial_application_manifests'::regclass and attname='proof_kind' and not attisdropped) added`)[0].added).toBe(false);
       release();await Promise.all([first,pending]);await apply();

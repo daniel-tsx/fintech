@@ -371,7 +371,7 @@ describeDatabase('B2.4 dormant capture settlement transactions (legacy F01 remai
     const before=await Promise.all([snapshot(f),snapshot(zero),snapshot(pending)]);
     const client=postgres(process.env.DATABASE_URL!,{max:1});try{await migrate(drizzle(client),{migrationsFolder:resolve(__dirname,'../../drizzle')});}finally{await client.end();}
     expect(await Promise.all([snapshot(f),snapshot(zero),snapshot(pending)])).toEqual(before);
-    const [row]=await database.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`;expect(row.count).toBe(13);
+    const [row]=await database.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`;expect(row.count).toBe(14);
     expect(await complete(id)).toBe('PROCESSED');
   });
 

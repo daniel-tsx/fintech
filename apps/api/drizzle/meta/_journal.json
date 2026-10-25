@@ -92,6 +92,13 @@
       "when": 1792627200000,
       "tag": "0012_shared_payment_proof_envelope",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792800000000,
+      "tag": "0013_manual_authorization_application",
+      "breakpoints": true
     }
   ]
 }
