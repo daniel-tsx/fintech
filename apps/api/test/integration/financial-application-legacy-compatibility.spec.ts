@@ -98,15 +98,15 @@ describeDb('R2-A.1 same legacy writers before and after the additive0009 upgrade
     if (phase === '0009') baseline.set(name, result);
     else { expect(baseline.has(name)).toBe(true); expect(result).toEqual(baseline.get(name)); }
   }
-  describe.each(['0009', '0010', '0011', '0012'])('schema %s', phase => {
+  describe.each(['0009', '0010', '0011', '0012', '0013'])('schema %s', phase => {
     beforeAll(async () => {
       if (phase !== '0009') {
         let source = folder;
-        if (phase === '0010' || phase === '0011') {
+        if (phase !== '0013') {
           source = resolve(__dirname, `../../../../.tmp/r2b1-legacy-through10-${randomUUID()}`);
           mkdirSync(resolve(source, 'meta'), { recursive: true });
           const journal = JSON.parse(readFileSync(resolve(folder, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
-          journal.entries = journal.entries.filter(e => e.idx < (phase === '0010' ? 11 : 12));
+          journal.entries = journal.entries.filter(e => e.idx < Number(phase) + 1);
           writeFileSync(resolve(source, 'meta/_journal.json'), JSON.stringify(journal));
           for (const e of journal.entries) copyFileSync(resolve(folder, e.tag + '.sql'), resolve(source, e.tag + '.sql'));
         }
@@ -115,7 +115,7 @@ describeDb('R2-A.1 same legacy writers before and after the additive0009 upgrade
         try { await migrate(drizzle(sql), { migrationsFolder: source }); } finally { await sql.end(); }
         expect(await fingerprint()).toEqual(before);
       }
-      expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(phase === '0009' ? 10 : phase === '0010' ? 11 : phase === '0011' ? 12 : 13);
+      expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(Number(phase) + 1);
     }, 30000);
     afterAll(async () => {
       expect((await h.db.sql`select count(*)::int n from capture_accounting_scopes where status='ACTIVE'`)[0].n).toBe(0);
