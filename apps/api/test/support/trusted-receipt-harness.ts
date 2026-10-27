@@ -93,7 +93,7 @@ export async function trustedReceiptHarness(migrationsFolder = resolve(__dirname
   mkdirSync(resolve(__dirname, '../../../../.tmp'), { recursive: true });
   writeFileSync(resolve(__dirname, '../../../../.tmp/r1-signed-integration-db.txt'), name + '\n');
   return { db, roles, publisher, peer, correlator, correlationPeer, worker, publication, peerPublication, correlation, peerCorrelation, stripe, secret, receiver, correlate, sign, http, inspect, read,
-    async close(expectedMigrations = 15) {
+    async close(expectedMigrations = 16) {
       try {
         expect((await db.sql`select count(*)::int n from capture_accounting_scopes where status='ACTIVE'`)[0].n).toBe(0);
         expect((await db.sql`select count(*)::int n from financial_evidence_accounts where runtime_enforcement<>'UNINSTALLED'`)[0].n).toBe(0);

@@ -16,8 +16,8 @@ export interface IntentResponse {
   body: { paymentId: string; attemptId: string; status: string; amount: number };
 }
 
-export async function firstCaptureIntentHarness() {
-  const h = await manualAuthorizationHarness();
+export async function firstCaptureIntentHarness(migrationsFolder?: string) {
+  const h = await manualAuthorizationHarness(migrationsFolder);
   await h.db.sql.unsafe(`grant execute on function public.prepare_first_capture_intent(uuid,text,numeric,text,integer,bigint,bigint),
     public.apply_first_capture_intent(),public.accept_first_capture_intent(uuid,text,numeric,text,integer,bigint,bigint) to "${h.worker.role}"`);
   async function install() {
@@ -64,7 +64,7 @@ export async function firstCaptureIntentHarness() {
     const receipt = await f.receive(event), sealed = await h.evidence.seal(receipt.id, 0, '0', source.id, f.sourceId);
     expect(sealed.state).toBe('SEALED');
     await h.evidence.bind(receipt.id, sealed.proof_id!, '0');
-    return { outbox, message, object, transport, pending, sourceId: source.id, inboxId: receipt.id, proofId: sealed.proof_id! };
+    return { outbox, message, object, event, transport, pending, sourceId: source.id, inboxId: receipt.id, proofId: sealed.proof_id! };
   }
   return { ...h, install, authorizationFixture: h.fixture, fixture, request, prepareIntent: prepare, applyIntent: apply, acceptIn, accept, captureEvidence };
 }

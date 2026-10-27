@@ -38,7 +38,7 @@ describeMigration('P-C atomic protected capture-intent migration', () => {
     }
     return { h, url, apply };
   }
-  afterAll(async () => { for (const h of harnesses) await h.close(15); });
+  afterAll(async () => { for (const h of harnesses) await h.close(16); });
   async function data(sql: Sql, names?: string[]) {
     const selected = names ?? (await sql<{ name: string }[]>`select tablename name from pg_tables where schemaname='public' order by tablename`).map(r => r.name);
     const rows: Record<string, unknown> = {};
@@ -82,9 +82,9 @@ describeMigration('P-C atomic protected capture-intent migration', () => {
     const [manifest] = await insert();
     return { ...f, inboxId: receipt.id, manifestId: String(manifest.id), insert };
   }
-  it('fresh fifteen-migration install repeats without installing a contract, enrollment or runtime grant', async () => {
+  it('fresh sixteen-migration install repeats without installing a contract, enrollment or runtime grant', async () => {
     const { h, apply } = await setup(); await apply(); await apply();
-    expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(15);
+    expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(16);
     for (const table of [...tables, 'financial_application_contracts', 'financial_application_scope_authority', 'financial_application_permits'])
       expect(await h.db.sql`select 1 from ${h.db.sql('public.' + table)}`).toHaveLength(0);
     expect(await h.db.sql`select 1 from capture_accounting_scopes where status='ACTIVE'`).toHaveLength(0);
@@ -154,7 +154,7 @@ describeMigration('P-C atomic protected capture-intent migration', () => {
     expect((error as { cause: Error }).cause.message).toMatch('planned P-C rollback');
     expect(await data(h.db.sql)).toEqual(before); expect(await catalog(h.db.sql)).toEqual(oldCatalog);
     expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(14);
-    await apply(); expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(15);
+    await apply(); expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(16);
   }, 30000);
   it('waits on the affected permit table and exposes no partial capture capability before atomic commit', async () => {
     const { h, url, apply } = await setup(staged(14));
@@ -176,7 +176,7 @@ describeMigration('P-C atomic protected capture-intent migration', () => {
       expect(await h.db.sql`select 1 from pg_tables where schemaname='public' and tablename=any(${tables})`).toHaveLength(0);
       expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(14);
       release(); await Promise.all([first, pending]); await apply();
-      expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(15);
+      expect((await h.db.sql`select count(*)::int n from drizzle.__drizzle_migrations`)[0].n).toBe(16);
     } finally { release(); await Promise.allSettled([first, ...(pending ? [pending] : [])]); await sql.end(); }
   }, 30000);
 });

@@ -110,5 +110,5 @@ export async function manualAuthorizationHarness(migrationsFolder?: string) {
     const rev = await revisions(f); return sql.begin(async tx => { await prepare(tx, f, generation, rev); return apply(tx); });
   }
   return { ...h, evidence, initial, worker, peer, ordinary, login, install, fixture, revisions, claim, prepare, apply, recognize, inspect, complete,
-    async close(expectedMigrations = 15) { for (const sql of clients) await sql.end(); await h.close(expectedMigrations); } };
+    async close(expectedMigrations = 16) { for (const sql of clients) await sql.end(); await h.close(expectedMigrations); } };
 }
