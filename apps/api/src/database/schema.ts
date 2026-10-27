@@ -540,9 +540,11 @@ export const financialApplicationManifests = pgTable('financial_application_mani
   foreignKey({ name:'application_manifest_refund_proof',columns: [t.legacyProofInboxId,t.proofRevision,t.paymentId,t.merchantId,t.currency], foreignColumns: [webhookFinancialEvidence.inboxId,webhookFinancialEvidence.proofRevision,webhookFinancialEvidence.paymentId,webhookFinancialEvidence.merchantId,webhookFinancialEvidence.currency] }),
   foreignKey({ name:'application_manifest_payment_proof',columns: [t.paymentProofInboxId,t.paymentOperationProofId,t.paymentId,t.merchantId,t.currency],foreignColumns:[paymentOperationEvidence.inboxId,paymentOperationEvidence.id,paymentOperationEvidence.paymentId,paymentOperationEvidence.merchantId,paymentOperationEvidence.currency] })]);
 export const financialApplicationPermits = pgTable('financial_application_permits', {
-  transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(), manifestId: uuid('manifest_id').notNull().unique().references(() => financialApplicationManifests.id),
+  transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(), manifestId: uuid('manifest_id').unique().references(() => financialApplicationManifests.id),
+  permitKind: text('permit_kind').notNull().default('APPLICATION'), intentManifestId: uuid('intent_manifest_id').unique().references(() => firstCaptureIntentManifests.id),
   databasePrincipal: customType<{ data: string }>({ dataType: () => 'name' })('database_principal').notNull().default(sql`session_user`),
-}, t => [primaryKey({ columns: [t.transactionId,t.backendPid] })]);
+}, t => [primaryKey({ columns: [t.transactionId,t.backendPid] }),
+  check('application_permit_exclusive_target',sql`((${t.permitKind}='APPLICATION' and ${t.manifestId} is not null and ${t.intentManifestId} is null) or (${t.permitKind}='CAPTURE_INTENT' and ${t.manifestId} is null and ${t.intentManifestId} is not null)) is true`)]);
 export const financialApplications = pgTable('financial_applications', {
   rootId: uuid('root_id').primaryKey().references(() => financialApplicationRoots.id), manifestId: uuid('manifest_id').notNull().unique(),
   result: text('result').notNull(), auditId: uuid('audit_id').notNull().unique().references(() => auditLogs.id), createdAt: createdAt(),
@@ -568,6 +570,37 @@ export const financialApplicationEffectLinks = pgTable('financial_application_ef
 }, t => [primaryKey({ columns: [t.manifestId,t.relationName,t.effectId] }),
   foreignKey({ columns: [t.manifestId,t.rootId], foreignColumns: [financialApplicationManifests.id,financialApplicationManifests.rootId] }),
   foreignKey({ columns: [t.rootId,t.merchantId,t.currency], foreignColumns: [financialApplicationRoots.id,financialApplicationRoots.merchantId,financialApplicationRoots.currency] })]);
+
+// P-C is a private command acceptance, separate from terminal application roots.
+export const firstCaptureIntentRequests = pgTable('first_capture_intent_requests', {
+  id:uuid('id').primaryKey(),authRootId:uuid('auth_root_id').notNull(),...allocationScope(),operation:text('operation').notNull(),requestKey:text('request_key').notNull(),
+  requestPayload:jsonb('request_payload').notNull(),requestHash:bytea('request_hash').notNull(),
+  databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull(),transactionId:xid8('transaction_id').notNull(),backendPid:integer('backend_pid').notNull(),
+  createdAt:timestamp('created_at',{withTimezone:true}).notNull(),
+},t=>[uniqueIndex('capture_intent_request_key').on(t.merchantId,t.operation,t.requestKey),
+  uniqueIndex('capture_intent_request_owner').on(t.id,t.authRootId,t.paymentId,t.merchantId,t.currency),
+  foreignKey({columns:[t.authRootId,t.paymentId,t.merchantId,t.currency],foreignColumns:[financialApplicationRoots.id,financialApplicationRoots.paymentId,financialApplicationRoots.merchantId,financialApplicationRoots.currency]})]);
+export const firstCaptureIntentManifests = pgTable('first_capture_intent_manifests', {
+  id:uuid('id').primaryKey(),requestId:uuid('request_id').notNull().unique(),authRootId:uuid('auth_root_id').notNull(),...allocationScope(),
+  provider:text('provider').notNull(),providerAccount:text('provider_account').notNull(),providerMode:text('provider_mode').notNull(),policy:text('policy').notNull(),epoch:allocationMoney('epoch').notNull(),
+  variant:text('variant').notNull(),amount:allocationMoney('amount').notNull(),authorizedAmount:allocationMoney('authorized_amount').notNull(),paymentVersion:integer('payment_version').notNull(),
+  scopeRevision:allocationMoney('scope_revision').notNull(),intakeRevision:allocationMoney('intake_revision').notNull(),transactionId:xid8('transaction_id').notNull(),backendPid:integer('backend_pid').notNull(),
+  databasePrincipal:customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull(),attemptId:uuid('attempt_id').notNull().unique(),outboxId:uuid('outbox_id').notNull().unique(),auditId:uuid('audit_id').notNull().unique(),
+  sourceManifest:jsonb('source_manifest').notNull(),effectManifest:jsonb('effect_manifest').notNull(),createdAt:timestamp('created_at',{withTimezone:true}).notNull(),
+},t=>[uniqueIndex('capture_intent_payment').on(t.paymentId),uniqueIndex('capture_intent_transaction').on(t.transactionId,t.backendPid),
+  uniqueIndex('capture_intent_manifest_owner').on(t.id,t.requestId,t.authRootId,t.paymentId,t.merchantId,t.currency),
+  foreignKey({columns:[t.requestId,t.authRootId,t.paymentId,t.merchantId,t.currency],foreignColumns:[firstCaptureIntentRequests.id,firstCaptureIntentRequests.authRootId,firstCaptureIntentRequests.paymentId,firstCaptureIntentRequests.merchantId,firstCaptureIntentRequests.currency]}),
+  foreignKey({columns:[t.attemptId,t.paymentId,t.merchantId,t.currency],foreignColumns:[paymentAttempts.id,paymentAttempts.paymentId,paymentAttempts.merchantId,paymentAttempts.currency]}),
+  foreignKey({columns:[t.outboxId,t.attemptId],foreignColumns:[outboxEvents.id,outboxEvents.aggregateId]}),
+  foreignKey({columns:[t.outboxId,t.attemptId,t.paymentId,t.merchantId,t.currency],foreignColumns:[providerCommandAuthorities.outboxId,providerCommandAuthorities.operationId,providerCommandAuthorities.paymentId,providerCommandAuthorities.merchantId,providerCommandAuthorities.currency]}),
+  foreignKey({columns:[t.auditId,t.merchantId],foreignColumns:[auditLogs.id,auditLogs.merchantId]}),
+  foreignKey({columns:[t.provider,t.providerAccount],foreignColumns:[financialEvidenceAccounts.provider,financialEvidenceAccounts.providerAccount]})]);
+export const firstCaptureIntentAcceptances = pgTable('first_capture_intent_acceptances', {
+  manifestId:uuid('manifest_id').primaryKey(),requestId:uuid('request_id').notNull().unique(),authRootId:uuid('auth_root_id').notNull(),...allocationScope(),
+  statusCode:integer('status_code').notNull(),responseBody:jsonb('response_body').notNull(),priorRevision:allocationMoney('prior_revision').notNull(),finalRevision:allocationMoney('final_revision').notNull(),
+  createdAt:timestamp('created_at',{withTimezone:true}).notNull(),
+},t=>[uniqueIndex('capture_intent_accepted_payment').on(t.paymentId),
+  foreignKey({columns:[t.manifestId,t.requestId,t.authRootId,t.paymentId,t.merchantId,t.currency],foreignColumns:[firstCaptureIntentManifests.id,firstCaptureIntentManifests.requestId,firstCaptureIntentManifests.authRootId,firstCaptureIntentManifests.paymentId,firstCaptureIntentManifests.merchantId,firstCaptureIntentManifests.currency]})]);
 
 // B1 storage only. SQL0011 owns checked source interpretation and closed finality.
 export const paymentOperationEvidence = pgTable('payment_operation_evidence', {

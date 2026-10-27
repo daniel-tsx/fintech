@@ -8,6 +8,8 @@ Money-moving endpoints require `Idempotency-Key`. The row key is `(merchant, ope
 
 Keys are durable and have no automatic short TTL because retries and dead-letter replay can outlive a cache window. Redis is never used as the idempotency authority.
 
+The dormant [P-C first-capture fixture](payment-lifecycle.md#dormant-protected-first-capture-intent) has its own namespaced immutable request/replay storage. It binds merchant, payment, original P-B root, database principal, amount and explicit fixture variant. A unique-key loser waits before financial locks, then compares the committed canonical request; changed payload or principal is refused. Exact replay validates the original accepted command, audit and response and returns it without requiring today's payment/attempt delivery state to equal the original pending state. Optimistic version/revision arguments gate new acceptance. The provider key is independently SQL-derived as `capture:<attempt UUID>` and stays fixed across D02 retries. Public API idempotency rows, operation names and response contracts are unchanged.
+
 ## Webhook inbox
 
 The Stripe receiver preserves the raw request body and uses the official SDK's `constructEvent` verification with `STRIPE_WEBHOOK_SECRET` before insertion. It normalizes supported Stripe objects, stores the normalized payload, headers, receipt time, and external event ID before returning `202`. Duplicates conflict on `(provider, provider event ID)` and return the original inbox ID.

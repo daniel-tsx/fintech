@@ -10,8 +10,8 @@ import { TrustedSignedReceiptService } from '../../src/webhooks/trusted-signed-r
 import type { PaymentEvent, PaymentObject } from './payment-operation-harness';
 import { providerObservationHarness, ScriptedStripeHttp } from './provider-observation-harness';
 
-export async function manualAuthorizationHarness() {
-  const h = await providerObservationHarness(), r = h.receipt, clients: Sql[] = [];
+export async function manualAuthorizationHarness(migrationsFolder?: string) {
+  const h = await providerObservationHarness(migrationsFolder), r = h.receipt, clients: Sql[] = [];
   const database = String((await h.db.sql`select current_database() n`)[0].n);
   async function login(label: string) {
     const role = `pb_${label}_${randomUUID().replaceAll('-', '')}`, password = randomBytes(32).toString('hex');
@@ -110,5 +110,5 @@ export async function manualAuthorizationHarness() {
     const rev = await revisions(f); return sql.begin(async tx => { await prepare(tx, f, generation, rev); return apply(tx); });
   }
   return { ...h, evidence, initial, worker, peer, ordinary, login, install, fixture, revisions, claim, prepare, apply, recognize, inspect, complete,
-    async close() { for (const sql of clients) await sql.end(); await h.close(14); } };
+    async close(expectedMigrations = 15) { for (const sql of clients) await sql.end(); await h.close(expectedMigrations); } };
 }

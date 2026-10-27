@@ -31,11 +31,11 @@ describeMigration('P-B atomic MANUAL authorization migration and legacy compatib
     return target;
   }
 
-  async function setup(source = folder) {
+  async function setup(source = staged(14)) {
     const h = await providerObservationHarness(source); harnesses.push(h);
     const url = new URL(process.env.MIGRATION_ADMIN_URL!);
     url.pathname = '/' + String((await h.db.sql`select current_database() n`)[0].n);
-    async function apply(from = folder) {
+    async function apply(from = staged(14)) {
       const sql = postgres(url.toString(), { max: 1, connection: { statement_timeout: 10000 } });
       try { await migrate(drizzle(sql), { migrationsFolder: from }); } finally { await sql.end(); }
     }
@@ -186,7 +186,7 @@ describeMigration('P-B atomic MANUAL authorization migration and legacy compatib
     const sql = postgres(url.toString(), { max: 1, connection: { statement_timeout: 10000 } }); let pending: Promise<void> | undefined;
     try {
       await Promise.race([started, first]); const waiter = Number((await sql`select pg_backend_pid() p`)[0].p); expect(waiter).not.toBe(holder);
-      pending = migrate(drizzle(sql), { migrationsFolder: folder }); let observed = false;
+      pending = migrate(drizzle(sql), { migrationsFolder: staged(14) }); let observed = false;
       for (let n = 0; n < 150; n++) {
         if ((await h.db.sql`select ${holder}=any(pg_blocking_pids(${waiter})) b`)[0].b) { observed = true; break; }
         await delay(20);
