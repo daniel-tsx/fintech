@@ -602,6 +602,16 @@ export const firstCaptureIntentAcceptances = pgTable('first_capture_intent_accep
 },t=>[uniqueIndex('capture_intent_accepted_payment').on(t.paymentId),
   foreignKey({columns:[t.manifestId,t.requestId,t.authRootId,t.paymentId,t.merchantId,t.currency],foreignColumns:[firstCaptureIntentManifests.id,firstCaptureIntentManifests.requestId,firstCaptureIntentManifests.authRootId,firstCaptureIntentManifests.paymentId,firstCaptureIntentManifests.merchantId,firstCaptureIntentManifests.currency]})]);
 
+// B2-A witnesses exist only until rollback: SQL0015 rejects their COMMIT.
+export const capturePreparationIssuances = pgTable('capture_preparation_issuances', {
+  transactionId: xid8('transaction_id').notNull(), backendPid: integer('backend_pid').notNull(),
+  databasePrincipal: customType<{data:string}>({dataType:()=>'name'})('database_principal').notNull(),
+  intentManifestId: uuid('intent_manifest_id').notNull().references(()=>firstCaptureIntentManifests.id),
+  rootId: uuid('root_id').notNull().unique().references(()=>financialApplicationRoots.id),
+  manifestId: uuid('manifest_id').notNull().unique().references(()=>financialApplicationManifests.id),
+  rootImage: jsonb('root_image').notNull(), manifestImage: jsonb('manifest_image').notNull(),
+},t=>[primaryKey({columns:[t.transactionId,t.backendPid]})]);
+
 // B1 storage only. SQL0011 owns checked source interpretation and closed finality.
 export const paymentOperationEvidence = pgTable('payment_operation_evidence', {
   id:uuid('id').primaryKey().defaultRandom(),inboxId:uuid('inbox_id').notNull().references(()=>receiptAdmissions.inboxId),proofVersion:integer('proof_version').notNull(),
