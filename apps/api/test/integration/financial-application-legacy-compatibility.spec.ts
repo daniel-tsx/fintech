@@ -98,11 +98,11 @@ describeDb('R2-A.1 same legacy writers before and after the additive0009 upgrade
     if (phase === '0009') baseline.set(name, result);
     else { expect(baseline.has(name)).toBe(true); expect(result).toEqual(baseline.get(name)); }
   }
-  describe.each(['0009', '0010', '0011', '0012', '0013'])('schema %s', phase => {
+  describe.each(['0009', '0010', '0011', '0012', '0013', '0014'])('schema %s', phase => {
     beforeAll(async () => {
       if (phase !== '0009') {
         let source = folder;
-        if (phase !== '0013') {
+        if (phase !== '0014') {
           source = resolve(__dirname, `../../../../.tmp/r2b1-legacy-through10-${randomUUID()}`);
           mkdirSync(resolve(source, 'meta'), { recursive: true });
           const journal = JSON.parse(readFileSync(resolve(folder, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };

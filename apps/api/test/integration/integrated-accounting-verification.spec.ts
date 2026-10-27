@@ -37,7 +37,7 @@ describeDatabase('B3.1 integrated financial evidence (test admission, not runtim
   });
   afterAll(async()=>{try {
     expect((await db.sql`select count(*)::integer as count from public.capture_accounting_scopes where status='ACTIVE'`)[0].count).toBe(0);
-    expect((await db.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`)[0].count).toBe(14);
+    expect((await db.sql`select count(*)::integer as count from drizzle.__drizzle_migrations`)[0].count).toBe(15);
   } finally {await db.onApplicationShutdown();}});
   const actor=(f:Scope)=>({id:randomUUID(),type:'API_KEY' as const,role:'MERCHANT_ADMIN' as const,merchantId:f.merchantId});
   async function merchant() {
