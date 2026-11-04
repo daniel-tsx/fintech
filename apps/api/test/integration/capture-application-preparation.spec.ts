@@ -10,7 +10,7 @@ jest.setTimeout(30000);
 describeDb('B2-A rollback-only capture preparation', () => {
   let h: Awaited<ReturnType<typeof capturePreparationHarness>>;
   type Fixture = Awaited<ReturnType<typeof h.fixture>>;
-  beforeAll(async () => { h = await capturePreparationHarness(); await h.install(); });
+  beforeAll(async () => { h = await capturePreparationHarness(undefined, 16); await h.install(); });
   afterAll(async () => { if (h) await h.close(); });
   async function refused(f: Fixture, request?: CapturePreparationRequest) {
     const before = await h.captureState(f);
