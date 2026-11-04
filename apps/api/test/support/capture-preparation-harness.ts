@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Sql, TransactionSql } from 'postgres';
 import { firstCaptureIntentHarness, type IntentVariant } from './first-capture-intent-harness';
 
@@ -11,8 +13,18 @@ export interface CapturePreparationPlan {
     terms: Record<string, number>; inventory: { receipts: unknown[]; sources: unknown[]; authorization_causes: unknown[] } };
   effect_manifest: { kind: string; [key: string]: unknown }[];
 }
-export async function capturePreparationHarness(folder?: string) {
-  const h = await firstCaptureIntentHarness(folder);
+export async function capturePreparationHarness(folder?: string, prefix?: number) {
+  let staged: string | undefined;
+  if (prefix !== undefined) {
+    const source = folder ?? resolve(__dirname, '../../drizzle');
+    staged = resolve(__dirname, '../../../../.tmp/r2-b2-b-tests', randomUUID());
+    mkdirSync(resolve(staged, 'meta'), { recursive: true });
+    const journal = JSON.parse(readFileSync(resolve(source, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
+    journal.entries = journal.entries.filter(entry => entry.idx < prefix);
+    writeFileSync(resolve(staged, 'meta/_journal.json'), JSON.stringify(journal));
+    for (const entry of journal.entries) copyFileSync(resolve(source, entry.tag + '.sql'), resolve(staged, entry.tag + '.sql'));
+  }
+  const h = await firstCaptureIntentHarness(staged ?? folder);
   await h.db.sql.unsafe(`grant execute on function public.claim_capture_preparation(uuid),
     public.prepare_capture_application(uuid,uuid,uuid,integer,bigint,bigint,bigint),public.read_capture_preparation() to "${h.worker.role}"`);
   async function install() {
@@ -67,5 +79,9 @@ export async function capturePreparationHarness(folder?: string) {
       (select count(*)::int from ledger_transactions where merchant_id=${f.merchantId}) journals`;
     return row;
   }
-  return { ...h, install, fixture, captureRevisions: revisions, prepareCapture: prepare, readCapture: read, inspectPlan, captureState: state, randomUUID };
+  return { ...h, install, fixture, captureRevisions: revisions, prepareCapture: prepare, readCapture: read, inspectPlan, captureState: state, randomUUID,
+    async close(expectedMigrations = prefix ?? 16) {
+      await h.close(expectedMigrations);
+      if (staged) rmSync(staged, { recursive: true, force: true });
+    } };
 }

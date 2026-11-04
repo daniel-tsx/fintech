@@ -10,17 +10,20 @@ import { publishCommandObservation, signedEvidence } from '../support/trusted-ev
 
 const describeMigration = process.env.RUN_DB_TESTS === '1' && process.env.RUN_MIGRATION_TESTS === '1' ? describe : describe.skip;
 describeMigration('P-C atomic protected capture-intent migration', () => {
-  const folder = resolve(__dirname, '../../drizzle');
+  const source = resolve(__dirname, '../../drizzle');
+  // P-C catalog assertions retain their accepted 0015 contract; 0016 has its own upgrade suite.
+  let folder = source;
+  beforeAll(() => { folder = staged(16); });
   const harnesses: Awaited<ReturnType<typeof manualAuthorizationHarness>>[] = [];
   const tables = ['first_capture_intent_requests', 'first_capture_intent_manifests', 'first_capture_intent_acceptances'];
   const entryPoints = ['prepare_first_capture_intent', 'apply_first_capture_intent', 'accept_first_capture_intent'];
   function staged(count: number, failure = false) {
     const target = resolve(__dirname, `../../../../.tmp/pc-migrations-${randomUUID()}`);
     mkdirSync(resolve(target, 'meta'), { recursive: true });
-    const journal = JSON.parse(readFileSync(resolve(folder, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
+    const journal = JSON.parse(readFileSync(resolve(source, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; tag: string }[] };
     journal.entries = journal.entries.filter(e => e.idx < count);
     writeFileSync(resolve(target, 'meta/_journal.json'), JSON.stringify(journal));
-    for (const e of journal.entries) copyFileSync(resolve(folder, e.tag + '.sql'), resolve(target, e.tag + '.sql'));
+    for (const e of journal.entries) copyFileSync(resolve(source, e.tag + '.sql'), resolve(target, e.tag + '.sql'));
     if (failure) {
       const last = journal.entries.at(-1)!;
       const path = resolve(target, last.tag + '.sql');

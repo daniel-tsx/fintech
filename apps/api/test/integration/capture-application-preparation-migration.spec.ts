@@ -20,10 +20,10 @@ describeMigration('B2-A forward migration and private authority',()=>{
     if(failure){const path=resolve(target,journal.entries.at(-1)!.tag+'.sql');writeFileSync(path,readFileSync(path,'utf8')+"\n--> statement-breakpoint\nDO $$ BEGIN RAISE EXCEPTION 'planned B2-A rollback'; END $$;\n");}
     return target;
   }
-  async function setup(source=folder){
+  async function setup(source=staged(16)){
     const h=await firstCaptureIntentHarness(source);harnesses.push(h);const url=new URL(process.env.MIGRATION_ADMIN_URL!);
     url.pathname='/'+String((await h.db.sql`select current_database() n`)[0].n);
-    async function apply(from=folder){const sql=postgres(url.toString(),{max:1,connection:{statement_timeout:10000}});try{await migrate(drizzle(sql),{migrationsFolder:from});}finally{await sql.end();}}
+    async function apply(from=staged(16)){const sql=postgres(url.toString(),{max:1,connection:{statement_timeout:10000}});try{await migrate(drizzle(sql),{migrationsFolder:from});}finally{await sql.end();}}
     return{h,url,apply};
   }
   afterAll(async()=>{
@@ -106,7 +106,7 @@ describeMigration('B2-A forward migration and private authority',()=>{
     const first=h.db.transaction(async tx=>{holder=Number((await tx`select pg_backend_pid() p`)[0].p);await tx`lock table public.financial_application_roots in row exclusive mode`;ready();await gate;});
     const sql=postgres(url.toString(),{max:1,connection:{statement_timeout:10000}});let pending:Promise<void>|undefined;
     try{await Promise.race([started,first]);const waiter=Number((await sql`select pg_backend_pid() p`)[0].p);expect(waiter).not.toBe(holder);
-      pending=migrate(drizzle(sql),{migrationsFolder:folder});let observed=false;
+      pending=migrate(drizzle(sql),{migrationsFolder:staged(16)});let observed=false;
       for(let n=0;n<150;n++){if((await h.db.sql`select ${holder}=any(pg_blocking_pids(${waiter})) blocked`)[0].blocked){observed=true;break;}await delay(20);}
       expect(observed).toBe(true);expect(await h.db.sql`select 1 from pg_tables where schemaname='public' and tablename='capture_preparation_issuances'`).toHaveLength(0);
       expect(await h.db.sql`select 1 from pg_proc where pronamespace='public'::regnamespace and proname='prepare_capture_application'`).toHaveLength(0);
