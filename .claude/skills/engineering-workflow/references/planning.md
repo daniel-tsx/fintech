@@ -7,6 +7,7 @@
 3. Split tightly coupled work into **sequential** checkpoints. Avoid speculative interfaces, a full-repo audit and an oversized all-at-once implementation. Reuse the current skill routing: `grilling` only for consequential unsettled choices, `ponytail` for bounded implementation.
 4. For HIGH_RISK financial work, name the transaction owner, source of money truth, ownership/currency checks, failure/retry model, concurrency participants, DB test matrix and prohibited activation. Mark unimplemented prerequisites as blockers; do not invent synthetic production authority.
 5. List tests that actually prove acceptance, and the checks possible in the environment; mocks do not prove Postgres concurrency or COMMIT semantics.
+6. State the acceptance criteria as a numbered list (AC1, AC2…), each mapped to the test or check that proves it. `ship-pr` later turns them into the PR's epic and evidence.
 
 ## Fresh independent plan reviewer
 

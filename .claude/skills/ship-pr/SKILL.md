@@ -16,7 +16,7 @@ T1/T2 tasks keep four short reports in `.tmp/<task-slug>/`. They become the PR d
 
 Facts only: every claim points to a command, test, file or review. Keep each report short; evidence may be the longest, at most 150 lines.
 
-After an `engineering-workflow` run, build the reports from its artifacts instead of keeping a second set: its `plan.md` gives the epic and todo; its reviewer reports, `verification.json` and `final-checks.json` give the evidence.
+After an `engineering-workflow` run, build the reports from its artifacts instead of keeping a second set: its `plan.md` gives the epic and todo; its reviewer reports, `verification.json` and `final-checks.json` give the evidence. The `plan.md` digest recorded in its `state.json` at plan approval stands in for the `epic.md` hash in step 5; carry its numbered ACs over unchanged.
 
 ## 1. Bring the branch up to date
 - In the task worktree, the tree is clean and everything is committed.
