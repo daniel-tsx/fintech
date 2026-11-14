@@ -93,6 +93,13 @@ Two-skill extension verification on **2026-10-20**: both installed hosts returne
 
 The host discovery checks above establish loading, not model compliance. Fresh interactive sessions still need the import/path and conditional-activation spot checks above; no end-to-end model interview, implementation or audit is claimed by this setup.
 
+## Keeping the repository clean
+
+- **After a merge**, run `pnpm cleanup` from the main checkout (dry run), then `pnpm cleanup --apply`. It removes task worktrees, local branches and `.tmp/<slug>/` directories only when the branch content is already in `origin/main` (by a trial merge, or a PR merged into `main` whose head is the branch tip, read with `gh` when available). It keeps dirty worktrees, open branches and `.tmp/agent-workflows/`, marks `.tmp` directories without a branch for review, and only prints `git push origin --delete …` for remote branches already in `main`. `ship-pr` step 8 runs it.
+- **Every PR targets `main`.** A PR merged into another task branch never reaches `main`; the stacked web UI PRs #10–#12 did exactly that.
+- **Review signals** also warn, without failing, when code changes but none of its owning documents (from the [reading matrix](AGENT_START_HERE.md)) do, and when application code gains `console.log`/`debugger` or a TODO/FIXME without an issue link. Update the document, or write "Docs: no change — <reason>" in the PR.
+- **Repository settings** (owner-managed): automatically delete head branches, and allow squash merging only.
+
 ## Handoff
 
 Report what was inspected, changed and executed; show failures and missing evidence plainly. Link the source-of-truth document and propose the next focused audit. Do not convert a configured CI job into a passed CI claim or a seeded dashboard into an end-to-end provider demo.

@@ -24,7 +24,7 @@ After an `engineering-workflow` run, build the reports from its artifacts instea
 
 ## 2. Guards
 - New migrations: the number follows the latest on `origin/main`, the journal entry is appended with a newer `when`. Run `node scripts/check-migration-history.mjs origin/main HEAD`.
-- `node scripts/check-pr-review-signals.mjs origin/main HEAD`. If it lists T2-area files but the task was classified lower, reclassify and meet the T2 obligations before continuing. Treat a CI or guard change as needing an independent review.
+- `node scripts/check-pr-review-signals.mjs origin/main HEAD`. If it lists T2-area files but the task was classified lower, reclassify and meet the T2 obligations before continuing. Treat a CI or guard change as needing an independent review. If it lists *Docs to check*, update the owning document or put "Docs: no change — <reason>" in the PR's *What and why*.
 
 ## 3. Checks
 Run the checks AGENTS.md *Verification commands* requires for what changed: the full pre-PR set when application code changed, otherwise the rows for the touched scope (docs, agent skills or workflow files), plus any size-specific checks. Any FAIL stops here. Report every planned check as PASS, FAIL or NOT RUN with the reason.
@@ -67,4 +67,7 @@ gh pr create --base main --head <type>/<slug> --title "<title>" --body-file .tmp
 (or the host's GitHub tools; where GraphQL is unavailable, use the REST API: `gh api repos/{owner}/{repo}/pulls -f title=… -f head=… -f base=main -F body=@.tmp/<task-slug>/pr.md`). Report the PR URL. Watch checks (`gh pr checks`) only if asked; never merge.
 
 ## 8. After the merge
-When the user confirms the merge: remove the worktree with `git worktree remove`, delete the local branch, and delete the task's `.tmp` files.
+When the user confirms the merge:
+- Offer to open a GitHub issue for each follow-up in `todo.md` (they are also in the PR description).
+- From the main checkout, run `pnpm cleanup` (dry run), check that it marks this task's worktree, branch and `.tmp/<task-slug>/` as REMOVE, then `pnpm cleanup --apply`. It only removes work whose content is in `origin/main`; anything it keeps, report with its reason.
+- Remote branches it lists are deleted only with the user's approval (GitHub deletes them itself when "Automatically delete head branches" is on).
