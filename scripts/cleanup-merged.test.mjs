@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync, existsSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apply, contentInBase, makeGit, parseWorktrees, plan } from './cleanup-merged.mjs';
+import { apply, looksMerged, makeGit, parseWorktrees, plan } from './cleanup-merged.mjs';
 
 Object.assign(process.env, {
   GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.invalid', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.invalid',
@@ -16,16 +16,13 @@ function fixture() {
   makeGit(dir)('clone', '-q', origin, repo);
   const git = makeGit(repo);
   const commit = (file, text, msg) => { writeFileSync(join(repo, file), text); git('add', file); git('commit', '-q', '-m', msg); };
+  appendFileSync(join(repo, '.git/info/exclude'), '.env\nnode_modules/\n');
   git('checkout', '-q', '-b', 'main');
   commit('a.txt', 'a\n', 'init');
-  // Squash-merged: same change lands on main as a different commit, then main moves on.
   git('checkout', '-q', '-b', 'feat/squashed'); commit('b.txt', 'b\n', 'b'); commit('b.txt', 'b2\n', 'b2');
-  // Open: never merged.
   git('checkout', '-q', 'main'); git('checkout', '-q', '-b', 'feat/open'); commit('c.txt', 'c\n', 'c');
-  // Stacked child merged into feat/open, not main.
-  git('checkout', '-q', '-b', 'feat/child'); commit('d.txt', 'd\n', 'd');
+  git('checkout', '-q', '-b', 'feat/child'); commit('d.txt', 'd\n', 'd'); // stacked on feat/open, merged there
   git('checkout', '-q', 'feat/open'); git('merge', '-q', '--squash', 'feat/child'); git('commit', '-q', '-m', 'child (#2)');
-  // Merged but its worktree has uncommitted work.
   git('checkout', '-q', 'main'); git('checkout', '-q', '-b', 'fix/dirty'); commit('e.txt', 'e\n', 'e');
   git('checkout', '-q', 'main');
   git('merge', '-q', '--squash', 'feat/squashed'); git('commit', '-q', '-m', 'b (#1)');
@@ -40,22 +37,29 @@ function fixture() {
   mkdirSync(join(repo, '.tmp/agent-workflows/x'), { recursive: true });
   mkdirSync(join(repo, '.tmp/orphan'), { recursive: true });
   const old = (Date.now() - 30 * 86_400_000) / 1000; utimesSync(join(repo, '.tmp/orphan'), old, old);
-  return { dir, repo, git };
+  // PRs merged into main, as GitHub reports them: branch -> head SHA.
+  const prs = new Map([['feat/squashed', git('rev-parse', 'feat/squashed')], ['fix/dirty', git('rev-parse', 'fix/dirty')]]);
+  return { dir, repo, git, prs };
 }
 
 const find = (actions, kind, suffix) => actions.find((a) => a.kind === kind && a.target.replaceAll('\\', '/').endsWith(suffix));
+const branchesOf = (git) => git('branch', '--format=%(refname:short)').split('\n').sort();
 
-test('content check: squash-merged is in main, unmerged and stacked-into-another-branch are not', (t) => {
-  const { dir, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  assert.equal(contentInBase(git, 'feat/squashed'), true);
-  assert.equal(contentInBase(git, 'fix/dirty'), true);
-  assert.equal(contentInBase(git, 'feat/open'), false);
-  assert.equal(contentInBase(git, 'feat/child'), false, 'merged into feat/open is not merged into main');
+test('without merged-PR evidence nothing is removed; content that looks merged is only REVIEW', (t) => {
+  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  assert.equal(looksMerged(git, 'feat/squashed'), true);
+  assert.equal(looksMerged(git, 'feat/child'), false, 'merged into feat/open is not in main');
+  for (const heads of [new Map(), null]) {
+    const { actions, remote } = plan(git, { root: repo, mergedHeads: heads });
+    assert.deepEqual(actions.filter((a) => a.action === 'REMOVE'), []);
+    assert.equal(find(actions, 'branch', 'fix/dirty').action, 'KEEP');
+    assert.deepEqual(remote, []);
+  }
 });
 
-test('plan removes only clean, merged work and never main, open branches or workflow handoffs', (t) => {
-  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const { actions, remote } = plan(git, { root: repo });
+test('with merged-PR evidence: removes only clean merged work; keeps dirty, open, stacked and workflow handoffs', (t) => {
+  const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const { actions, remote } = plan(git, { root: repo, mergedHeads: prs });
   assert.equal(find(actions, 'worktree', '.tmp/squashed/worktree').action, 'REMOVE');
   assert.equal(find(actions, 'worktree', '.tmp/dirty/worktree').reason, 'uncommitted changes');
   assert.equal(find(actions, 'worktree', '.tmp/open/worktree').action, 'KEEP');
@@ -73,60 +77,52 @@ test('plan removes only clean, merged work and never main, open branches or work
   assert.equal(existsSync(join(repo, '.tmp/squashed')), false);
   assert.equal(existsSync(join(repo, '.tmp/dirty/worktree/e.txt')), true);
   assert.equal(existsSync(join(repo, '.tmp/agent-workflows/x')), true);
-  assert.deepEqual(git('branch', '--format=%(refname:short)').split('\n').sort(), ['feat/child', 'feat/open', 'fix/dirty', 'main']);
+  assert.deepEqual(branchesOf(git), ['feat/child', 'feat/open', 'fix/dirty', 'main']);
+  assert.match(git('ls-remote', 'origin'), /refs\/heads\/feat\/squashed/, 'remote branches are never deleted');
 });
 
-test('parseWorktrees reads porcelain output, including detached entries', () => {
-  assert.deepEqual(parseWorktrees('worktree /r\nHEAD 1\nbranch refs/heads/main\n\nworktree /r/.tmp/x/worktree\nHEAD 2\ndetached\n'), [
-    { path: '/r', branch: 'main' }, { path: '/r/.tmp/x/worktree', branch: null },
-  ]);
-});
-
-test('a merged-into-main PR counts only when its head is exactly the branch tip', (t) => {
-  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const child = git('rev-parse', 'feat/child');
-  const stale = plan(git, { root: repo, mergedHeads: new Map([['feat/child', git('rev-parse', 'feat/child~1')]]) });
-  assert.equal(find(stale.actions, 'branch', 'feat/child').action, 'KEEP', 'branch moved after the PR merged');
-  const exact = plan(git, { root: repo, mergedHeads: new Map([['feat/child', child]]) });
-  assert.equal(find(exact.actions, 'branch', 'feat/child').action, 'REMOVE');
-  assert.ok(exact.remote.includes('feat/child'));
-});
-
-test('regression: branches without work of their own are never treated as merged (planning task, empty commits, revert)', (t) => {
-  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+test('regression: task branches without commits of their own are kept, from main or from a merged task branch', (t) => {
+  const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  // Planning task from main; stacked child and follow-up created from a branch whose PR merged.
   git('worktree', 'add', '-q', '-b', 'feat/pending', join(repo, '.tmp/pending/worktree'), 'origin/main');
   writeFileSync(join(repo, '.tmp/pending/plan.md'), 'plan\n');
-  git('branch', 'feat/empty', 'origin/main'); makeGit(repo)('commit', '-q', '--allow-empty', '-m', 'x'); // on main: unrelated
-  git('checkout', '-q', 'feat/empty'); git('commit', '-q', '--allow-empty', '-m', 'empty');
-  git('checkout', '-q', '-b', 'feat/reverted', 'origin/main'); writeFileSync(join(repo, 'r.txt'), 'r\n'); git('add', 'r.txt'); git('commit', '-q', '-m', 'r'); git('revert', '--no-edit', 'HEAD');
-  git('checkout', '-q', 'main'); git('push', '-q', 'origin', 'feat/pending'); git('fetch', '-q', 'origin');
-  for (const b of ['feat/pending', 'feat/empty', 'feat/reverted']) assert.equal(contentInBase(git, b), false, b);
-  const { actions, remote } = plan(git, { root: repo });
-  assert.equal(find(actions, 'worktree', '.tmp/pending/worktree').action, 'KEEP');
-  assert.equal(find(actions, 'branch', 'feat/pending').action, 'KEEP');
-  assert.equal(find(actions, 'tmp', '.tmp/pending').action, 'KEEP');
-  assert.equal(remote.includes('feat/pending'), false);
+  git('worktree', 'add', '-q', '-b', 'feat/stacked', join(repo, '.tmp/stacked/worktree'), 'feat/squashed');
+  writeFileSync(join(repo, '.tmp/stacked/plan.md'), 'plan\n');
+  git('branch', 'fix/followup', 'feat/squashed');
+  mkdirSync(join(repo, '.tmp/followup')); writeFileSync(join(repo, '.tmp/followup/epic.md'), 'epic\n');
+  git('push', '-q', 'origin', 'feat/pending', 'feat/stacked'); git('fetch', '-q', 'origin');
+  const { actions, remote } = plan(git, { root: repo, mergedHeads: prs });
+  for (const b of ['feat/pending', 'feat/stacked', 'fix/followup']) assert.notEqual(find(actions, 'branch', b).action, 'REMOVE', b);
+  for (const s of ['.tmp/pending', '.tmp/stacked', '.tmp/followup']) assert.equal(find(actions, 'tmp', s).action, 'KEEP', s);
+  assert.deepEqual(remote, ['feat/squashed']);
 });
 
 test('regression: a .tmp/<slug>/ holding a kept (detached, dirty) worktree is never deleted', (t) => {
-  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const wt = join(repo, '.tmp/squashed/worktree');
   makeGit(wt)('checkout', '-q', '--detach'); writeFileSync(join(wt, 'b.txt'), 'unsaved\n');
-  const { actions } = plan(git, { root: repo });
+  const { actions } = plan(git, { root: repo, mergedHeads: prs });
   assert.equal(find(actions, 'worktree', '.tmp/squashed/worktree').reason, 'detached HEAD');
-  assert.equal(find(actions, 'branch', 'feat/squashed').action, 'REMOVE');
   assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'KEEP');
   apply(git, actions);
   assert.equal(existsSync(join(wt, 'b.txt')), true);
 });
 
-test('merge-commit merges count; shared slugs and missing base are handled', (t) => {
+test('merged worktrees holding ignored files of their own, or locked, are kept; regenerable output is not a reason', (t) => {
+  const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const wt = join(repo, '.tmp/squashed/worktree');
+  mkdirSync(join(wt, 'node_modules/x'), { recursive: true }); writeFileSync(join(wt, 'node_modules/x/i.js'), '');
+  assert.equal(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').action, 'REMOVE');
+  writeFileSync(join(wt, '.env'), 'SECRET=local\n');
+  assert.match(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').reason, /ignored files of its own: \.env/);
+  rmSync(join(wt, '.env')); git('worktree', 'lock', wt);
+  assert.equal(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').reason, 'locked');
+});
+
+test('a missing base fails with a clear message; parseWorktrees reads porcelain output', (t) => {
   const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  git('checkout', '-q', '-b', 'feat/merged', 'main'); writeFileSync(join(repo, 'm.txt'), 'm\n'); git('add', 'm.txt'); git('commit', '-q', '-m', 'm');
-  git('checkout', '-q', 'main'); git('merge', '-q', '--no-ff', '--no-edit', 'feat/merged'); git('push', '-q', 'origin', 'main'); git('fetch', '-q', 'origin');
-  assert.equal(contentInBase(git, 'feat/merged'), true);
-  git('branch', 'fix/squashed', 'feat/open'); // open branch sharing the slug of a merged one
-  const { actions } = plan(git, { root: repo });
-  assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'KEEP');
   assert.throws(() => plan(git, { root: repo, base: 'origin/nope' }), /origin\/nope not found/);
+  assert.deepEqual(parseWorktrees('worktree /r\nHEAD 1\nbranch refs/heads/main\n\nworktree /r/.tmp/x/worktree\nHEAD 2\ndetached\nlocked reason\n'), [
+    { path: '/r', branch: 'main', locked: false }, { path: '/r/.tmp/x/worktree', branch: null, locked: true },
+  ]);
 });
