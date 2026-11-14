@@ -69,5 +69,8 @@ gh pr create --base main --head <type>/<slug> --title "<title>" --body-file .tmp
 ## 8. After the merge
 When the user confirms the merge:
 - Offer to open a GitHub issue for each follow-up in `todo.md` (they are also in the PR description).
-- From the main checkout, run `pnpm cleanup` (dry run), check that it marks this task's worktree, branch and `.tmp/<task-slug>/` as REMOVE, then `pnpm cleanup --apply`. It only removes work whose content is in `origin/main`; anything it keeps, report with its reason.
-- Remote branches it lists are deleted only with the user's approval (GitHub deletes them itself when "Automatically delete head branches" is on).
+- Remove only this task's own work, from the main checkout:
+  1. The PR merged into `main`: `gh api repos/{owner}/{repo}/pulls/<n> --jq '[.merged_at, .base.ref, .head.sha]'` shows a merge time, `main`, and the branch tip.
+  2. The worktree holds nothing to keep: `git -C <worktree> -c status.showUntrackedFiles=all status --porcelain --ignored=matching --untracked-files=all` lists only regenerable output (`node_modules`, `.next`, `dist`); otherwise ask the user.
+  3. `git worktree remove <worktree>`, `git branch -D <type>/<slug>`, then delete `.tmp/<task-slug>/`.
+- Run `pnpm cleanup` and report anything else it lists as DONE or REVIEW. It deletes nothing; other tasks' work and remote branches are removed only by the user or with their approval (GitHub deletes merged head branches itself when "Automatically delete head branches" is on).

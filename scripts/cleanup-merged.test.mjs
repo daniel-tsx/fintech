@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { apply, looksMerged, makeGit, parseWorktrees, plan } from './cleanup-merged.mjs';
+import { looksMerged, makeGit, parseWorktrees, plan, removalCommands } from './cleanup-merged.mjs';
 
 Object.assign(process.env, {
   GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.invalid', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.invalid',
@@ -45,40 +45,42 @@ function fixture() {
 const find = (actions, kind, suffix) => actions.find((a) => a.kind === kind && a.target.replaceAll('\\', '/').endsWith(suffix));
 const branchesOf = (git) => git('branch', '--format=%(refname:short)').split('\n').sort();
 
-test('without merged-PR evidence nothing is removed; content that looks merged is only REVIEW', (t) => {
+test('without merged-PR evidence nothing is DONE; content that looks merged is only REVIEW', (t) => {
   const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
   assert.equal(looksMerged(git, 'feat/squashed'), true);
   assert.equal(looksMerged(git, 'feat/child'), false, 'merged into feat/open is not in main');
   for (const heads of [new Map(), null]) {
     const { actions, remote } = plan(git, { root: repo, mergedHeads: heads });
-    assert.deepEqual(actions.filter((a) => a.action === 'REMOVE'), []);
+    assert.deepEqual(actions.filter((a) => a.action === 'DONE'), []);
     assert.equal(find(actions, 'branch', 'fix/dirty').action, 'KEEP');
     assert.deepEqual(remote, []);
   }
 });
 
-test('with merged-PR evidence: removes only clean merged work; keeps dirty, open, stacked and workflow handoffs', (t) => {
+test('with merged-PR evidence: only clean merged work is DONE; dirty, open, stacked and workflow handoffs are kept', (t) => {
   const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const { actions, remote } = plan(git, { root: repo, mergedHeads: prs });
-  assert.equal(find(actions, 'worktree', '.tmp/squashed/worktree').action, 'REMOVE');
+  assert.equal(find(actions, 'worktree', '.tmp/squashed/worktree').action, 'DONE');
   assert.equal(find(actions, 'worktree', '.tmp/dirty/worktree').reason, 'uncommitted changes');
   assert.equal(find(actions, 'worktree', '.tmp/open/worktree').action, 'KEEP');
-  assert.equal(find(actions, 'branch', 'feat/squashed').action, 'REMOVE');
+  assert.equal(find(actions, 'branch', 'feat/squashed').action, 'DONE');
   assert.equal(find(actions, 'branch', 'fix/dirty').action, 'KEEP');
   assert.equal(find(actions, 'branch', 'feat/child').action, 'KEEP');
   assert.equal(actions.some((a) => a.target === 'main'), false);
-  assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'REMOVE');
+  assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'DONE');
   assert.equal(find(actions, 'tmp', '.tmp/dirty').action, 'KEEP');
   assert.equal(find(actions, 'tmp', '.tmp/agent-workflows').action, 'KEEP');
   assert.match(find(actions, 'tmp', '.tmp/orphan').reason, /untouched \d+ days/);
   assert.deepEqual(remote, ['feat/squashed']);
 
-  apply(git, actions);
-  assert.equal(existsSync(join(repo, '.tmp/squashed')), false);
-  assert.equal(existsSync(join(repo, '.tmp/dirty/worktree/e.txt')), true);
-  assert.equal(existsSync(join(repo, '.tmp/agent-workflows/x')), true);
-  assert.deepEqual(branchesOf(git), ['feat/child', 'feat/open', 'fix/dirty', 'main']);
-  assert.match(git('ls-remote', 'origin'), /refs\/heads\/feat\/squashed/, 'remote branches are never deleted');
+  const cmds = removalCommands(actions);
+  assert.equal(cmds.length, 3);
+  assert.match(cmds[0], /^git worktree remove .*\.tmp\/squashed\/worktree$/);
+  assert.equal(cmds[1], 'git branch -D feat/squashed');
+  assert.match(cmds[2], /^rm -r .*\.tmp\/squashed$/);
+  // Report only: planning changed nothing on disk or in refs.
+  assert.equal(existsSync(join(repo, '.tmp/squashed/worktree')), true);
+  assert.deepEqual(branchesOf(git), ['feat/child', 'feat/open', 'feat/squashed', 'fix/dirty', 'main']);
 });
 
 test('regression: task branches without commits of their own are kept, from main or from a merged task branch', (t) => {
@@ -92,7 +94,7 @@ test('regression: task branches without commits of their own are kept, from main
   mkdirSync(join(repo, '.tmp/followup')); writeFileSync(join(repo, '.tmp/followup/epic.md'), 'epic\n');
   git('push', '-q', 'origin', 'feat/pending', 'feat/stacked'); git('fetch', '-q', 'origin');
   const { actions, remote } = plan(git, { root: repo, mergedHeads: prs });
-  for (const b of ['feat/pending', 'feat/stacked', 'fix/followup']) assert.notEqual(find(actions, 'branch', b).action, 'REMOVE', b);
+  for (const b of ['feat/pending', 'feat/stacked', 'fix/followup']) assert.notEqual(find(actions, 'branch', b).action, 'DONE', b);
   for (const s of ['.tmp/pending', '.tmp/stacked', '.tmp/followup']) assert.equal(find(actions, 'tmp', s).action, 'KEEP', s);
   assert.deepEqual(remote, ['feat/squashed']);
 });
@@ -104,15 +106,24 @@ test('regression: a .tmp/<slug>/ holding a kept (detached, dirty) worktree is ne
   const { actions } = plan(git, { root: repo, mergedHeads: prs });
   assert.equal(find(actions, 'worktree', '.tmp/squashed/worktree').reason, 'detached HEAD');
   assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'KEEP');
-  apply(git, actions);
-  assert.equal(existsSync(join(wt, 'b.txt')), true);
+});
+
+test('regression: untracked and hidden files are seen regardless of user git config', (t) => {
+  const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const wt = join(repo, '.tmp/squashed/worktree');
+  git('config', 'status.showUntrackedFiles', 'no');
+  writeFileSync(join(wt, 'notes.txt'), 'mine\n');
+  assert.equal(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').reason, 'uncommitted changes');
+  rmSync(join(wt, 'notes.txt'));
+  makeGit(wt)('update-index', '--skip-worktree', 'b.txt'); writeFileSync(join(wt, 'b.txt'), 'hidden edit\n');
+  assert.match(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').reason, /skip-worktree/);
 });
 
 test('merged worktrees holding ignored files of their own, or locked, are kept; regenerable output is not a reason', (t) => {
   const { dir, repo, git, prs } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
   const wt = join(repo, '.tmp/squashed/worktree');
   mkdirSync(join(wt, 'node_modules/x'), { recursive: true }); writeFileSync(join(wt, 'node_modules/x/i.js'), '');
-  assert.equal(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').action, 'REMOVE');
+  assert.equal(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').action, 'DONE');
   writeFileSync(join(wt, '.env'), 'SECRET=local\n');
   assert.match(find(plan(git, { root: repo, mergedHeads: prs }).actions, 'worktree', '.tmp/squashed/worktree').reason, /ignored files of its own: \.env/);
   rmSync(join(wt, '.env')); git('worktree', 'lock', wt);

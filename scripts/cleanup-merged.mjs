@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Post-merge cleanup for task worktrees, local branches and .tmp/<slug>/ directories.
-// Dry run by default; `--apply` removes only what the plan marks REMOVE.
+// Post-merge cleanup REPORT for task worktrees, local branches and .tmp/<slug>/ directories.
+// It never deletes anything: it prints what is done (DONE), what to keep (KEEP) and what a human
+// should look at (REVIEW), with the commands to remove DONE entries by hand.
 //
-// A branch is REMOVE only on positive evidence: a PR merged into main whose head is exactly the
+// A branch is DONE only on positive evidence: a PR merged into main whose head is exactly the
 // branch tip (GitHub REST API via `gh`). Content heuristics cannot tell a finished branch from a
 // task that has no commits yet or one stacked on another task, so a branch whose changes merely
 // look present in origin/main is marked REVIEW and never removed automatically.
-// Never touches main, the main or current checkout, dirty/locked worktrees or worktrees holding
-// ignored files of their own (.env, notes), .tmp/agent-workflows/, or remote branches (remote
-// deletions are printed for the human).
+// main, the main or current checkout, dirty/locked worktrees, worktrees holding ignored files of
+// their own (.env, notes), .tmp/agent-workflows/ and remote branches are never DONE.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -56,7 +56,9 @@ function worktreeKeepReason(wt, current) {
   if (path === current) return 'current checkout';
   if (wt.locked) return 'locked';
   if (!existsSync(path)) return 'directory missing; run `git worktree prune` if it was deleted on purpose';
-  const status = makeGit(path)('status', '--porcelain', '--ignored').split('\n').filter(Boolean);
+  // Independent of user config such as status.showUntrackedFiles=no.
+  const status = makeGit(path)('-c', 'status.showUntrackedFiles=all', 'status', '--porcelain', '--ignored=matching', '--untracked-files=all').split('\n').filter(Boolean);
+  if (makeGit(path)('ls-files', '-v').split('\n').some((l) => /^[a-zS] /.test(l))) return 'files hidden by skip-worktree/assume-unchanged';
   if (status.some((l) => !l.startsWith('!! '))) return 'uncommitted changes';
   const own = status.map((l) => l.slice(3)).filter((f) => !DISPOSABLE.test(f));
   if (own.length) return `ignored files of its own: ${own.slice(0, 3).join(', ')}${own.length > 3 ? ', …' : ''}`;
@@ -77,18 +79,18 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
   for (const wt of worktrees.slice(1)) { // the first entry is the main checkout
     const reason = !wt.branch ? 'detached HEAD' : !merged.get(wt.branch) ? 'no PR merged into main at this tip' : worktreeKeepReason(wt, current);
     if (reason) { if (wt.branch) keepBranch.add(wt.branch); actions.push({ kind: 'worktree', target: wt.path, action: 'KEEP', reason }); }
-    else actions.push({ kind: 'worktree', target: wt.path, action: 'REMOVE', reason: `${wt.branch}: PR merged into main` });
+    else actions.push({ kind: 'worktree', target: wt.path, action: 'DONE', reason: `${wt.branch}: PR merged into main` });
   }
   for (const b of branches) {
     if (keepBranch.has(b)) actions.push({ kind: 'branch', target: b, action: 'KEEP', reason: 'worktree kept' });
-    else if (merged.get(b)) actions.push({ kind: 'branch', target: b, action: 'REMOVE', reason: 'PR merged into main at this tip' });
+    else if (merged.get(b)) actions.push({ kind: 'branch', target: b, action: 'DONE', reason: 'PR merged into main at this tip' });
     else if (looksMerged(git, b, base)) actions.push({ kind: 'branch', target: b, action: 'REVIEW', reason: 'changes appear in main but no merged PR matches; delete by hand if done' });
     else actions.push({ kind: 'branch', target: b, action: 'KEEP', reason: 'open' });
   }
 
   const tmp = join(root, '.tmp');
-  const removedBranches = actions.filter((a) => a.kind === 'branch' && a.action === 'REMOVE').map((a) => a.target);
-  const removedWorktrees = new Set(actions.filter((a) => a.kind === 'worktree' && a.action === 'REMOVE').map((a) => resolve(a.target)));
+  const removedBranches = actions.filter((a) => a.kind === 'branch' && a.action === 'DONE').map((a) => a.target);
+  const removedWorktrees = new Set(actions.filter((a) => a.kind === 'worktree' && a.action === 'DONE').map((a) => resolve(a.target)));
   const keptWorktrees = worktrees.slice(1).map((w) => resolve(w.path)).filter((p) => !removedWorktrees.has(p));
   const live = new Set(branches.filter((b) => !removedBranches.includes(b)).map((b) => b.split('/').pop()));
   for (const slug of existsSync(tmp) ? readdirSync(tmp) : []) {
@@ -99,7 +101,7 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
     if (slug === 'agent-workflows') reason = 'engineering-workflow handoffs are finalized by a human';
     else if (keptWorktrees.some((p) => p === resolve(dir) || p.startsWith(resolve(dir) + sep))) reason = 'holds a worktree that is kept';
     else if (live.has(slug)) reason = 'a branch with this slug is still open';
-    else if (owner) { action = 'REMOVE'; reason = `${owner}: PR merged into main`; }
+    else if (owner) { action = 'DONE'; reason = `${owner}: PR merged into main`; }
     else {
       const days = Math.floor((now - statSync(dir).mtimeMs) / 86_400_000);
       action = 'REVIEW'; reason = days >= STALE_DAYS ? `no branch, untouched ${days} days` : 'no matching branch';
@@ -113,27 +115,27 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
   return { actions, remote, prData: mergedHeads !== null };
 }
 
-/** Executes REMOVE actions only. Remote branches are never touched. */
-export function apply(git, actions) {
-  for (const a of actions.filter((x) => x.action === 'REMOVE')) {
-    if (a.kind === 'worktree') git('worktree', 'remove', a.target); // no --force: git refuses dirty trees
-    else if (a.kind === 'branch') git('branch', '-D', a.target);
-    else if (a.kind === 'tmp') rmSync(a.target, { recursive: true, force: true });
-  }
+/** Commands a human can run to remove the DONE entries; printed, never executed. */
+export function removalCommands(actions) {
+  const q = (s) => (/[^\w./:@-]/.test(s) ? `"${s}"` : s);
+  return actions.filter((a) => a.action === 'DONE').map((a) =>
+    a.kind === 'worktree' ? `git worktree remove ${q(a.target)}` : a.kind === 'branch' ? `git branch -D ${q(a.target)}` : `rm -r ${q(a.target)}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = new Set(process.argv.slice(2));
+  if (args.has('--apply')) { console.error('cleanup: report only; there is no --apply. Run the printed commands after checking them.'); process.exit(2); }
   try {
     const git = makeGit(process.cwd());
     const root = dirname(resolve(git('rev-parse', '--path-format=absolute', '--git-common-dir')));
     if (!args.has('--no-fetch')) git('fetch', 'origin', '--prune');
     const { actions, remote, prData } = plan(git, { root, mergedHeads: loadMergedHeads(process.cwd()) });
     for (const a of actions) console.log(`${a.action.padEnd(6)} ${a.kind.padEnd(8)} ${a.target}  (${a.reason})`);
-    if (!prData) console.log('\n`gh` unavailable or not signed in: no merged-PR evidence, so nothing is marked REMOVE.');
+    if (!prData) console.log('\n`gh` unavailable or not signed in: no merged-PR evidence, so nothing is DONE.');
+    const cmds = removalCommands(actions);
+    if (cmds.length) console.log(`\nTo remove the DONE entries (check them first; this script deletes nothing):\n${cmds.map((c) => `  ${c}`).join('\n')}`);
     if (remote.length) console.log(`\nRemote branches whose merged PR head is their tip (delete only with the owner's approval):\n  git push origin --delete ${remote.join(' ')}`);
-    if (args.has('--apply')) { apply(git, actions); console.log('\nApplied the REMOVE actions.'); }
-    else console.log('\nDry run. Re-run with --apply to remove the REMOVE entries.');
+    if (!cmds.length && !remote.length) console.log('\nNothing to clean up.');
   } catch (err) {
     console.error(`cleanup: ${String(err.stderr || err.message).trim().split('\n')[0]}`); process.exit(1);
   }
