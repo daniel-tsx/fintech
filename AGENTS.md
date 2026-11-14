@@ -30,7 +30,7 @@ Run from the root of your worktree. Open [verification](docs/verification.md) on
 | PostgreSQL, migrations, durable financial effects | API checks + `pnpm test:verification` + `pnpm test:integration:docker` |
 | Redis/BullMQ, RabbitMQ, cross-service runtime | No isolated suite yet: run unit checks and report the boundary as NOT RUN |
 | Agent skills or workflow files | `node scripts/sync-agent-skills.mjs --check`, `node scripts/check-engineering-workflow.mjs` |
-| Before opening a PR (T1/T2) | `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm typecheck` |
+| Before opening a PR, when application code changed | `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm typecheck` (PRs without application code use the rows above for their scope) |
 
 Report each check as PASS, FAIL or NOT RUN with command, scope, counts and reason. Local runs are not hosted CI.
 

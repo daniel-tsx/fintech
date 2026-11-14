@@ -9,7 +9,7 @@ Codex reviews; you (the implementer) prepare the package, run it, and triage. Co
 
 ## 1. Prepare
 - Work is committed on your task branch inside your worktree: review a commit, not a dirty tree.
-- `git fetch origin`; rebase onto `origin/main` if it moved. Record the reviewed SHA: `git rev-parse HEAD`.
+- `git fetch origin`; rebase onto `origin/main` if it moved. Record the reviewed SHA (`git rev-parse HEAD`) and the brief's hash (`sha256sum .tmp/<task-slug>/epic.md`); both go at the top of the review file, so `ship-pr` can confirm the acceptance criteria did not change after review.
 - Use the task's `.tmp/<task-slug>/epic.md` as the brief (see `ship-pr`, *Task reports*); create it if missing: problem, goal, scope and non-goals, task size, invariants and boundaries touched, numbered acceptance criteria. Facts only: no claims that the change is correct, minimal or safe.
 
 ## 2. Run (read-only, from the worktree root)
@@ -34,4 +34,4 @@ Not installed, config or sandbox error, usage limit: report the error once, do n
 Fix accepted findings in one wave, rerun the affected checks, and review the new SHA again. At most two correction rounds; then stop and hand the remaining findings to the user.
 
 ## 5. Report (PR Review section)
-Reviewer (Codex, model and effort, or fallback), reviewed SHA, a findings table with disposition, and open human decisions. This goes into the task's `evidence.md`.
+Reviewer (Codex, model and effort, or fallback), reviewed SHA and `epic.md` hash, a findings table with severity and disposition, and open human decisions. This goes into the task's `evidence.md`.
