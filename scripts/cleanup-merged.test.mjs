@@ -91,3 +91,42 @@ test('a merged-into-main PR counts only when its head is exactly the branch tip'
   assert.equal(find(exact.actions, 'branch', 'feat/child').action, 'REMOVE');
   assert.ok(exact.remote.includes('feat/child'));
 });
+
+test('regression: branches without work of their own are never treated as merged (planning task, empty commits, revert)', (t) => {
+  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  git('worktree', 'add', '-q', '-b', 'feat/pending', join(repo, '.tmp/pending/worktree'), 'origin/main');
+  writeFileSync(join(repo, '.tmp/pending/plan.md'), 'plan\n');
+  git('branch', 'feat/empty', 'origin/main'); makeGit(repo)('commit', '-q', '--allow-empty', '-m', 'x'); // on main: unrelated
+  git('checkout', '-q', 'feat/empty'); git('commit', '-q', '--allow-empty', '-m', 'empty');
+  git('checkout', '-q', '-b', 'feat/reverted', 'origin/main'); writeFileSync(join(repo, 'r.txt'), 'r\n'); git('add', 'r.txt'); git('commit', '-q', '-m', 'r'); git('revert', '--no-edit', 'HEAD');
+  git('checkout', '-q', 'main'); git('push', '-q', 'origin', 'feat/pending'); git('fetch', '-q', 'origin');
+  for (const b of ['feat/pending', 'feat/empty', 'feat/reverted']) assert.equal(contentInBase(git, b), false, b);
+  const { actions, remote } = plan(git, { root: repo });
+  assert.equal(find(actions, 'worktree', '.tmp/pending/worktree').action, 'KEEP');
+  assert.equal(find(actions, 'branch', 'feat/pending').action, 'KEEP');
+  assert.equal(find(actions, 'tmp', '.tmp/pending').action, 'KEEP');
+  assert.equal(remote.includes('feat/pending'), false);
+});
+
+test('regression: a .tmp/<slug>/ holding a kept (detached, dirty) worktree is never deleted', (t) => {
+  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const wt = join(repo, '.tmp/squashed/worktree');
+  makeGit(wt)('checkout', '-q', '--detach'); writeFileSync(join(wt, 'b.txt'), 'unsaved\n');
+  const { actions } = plan(git, { root: repo });
+  assert.equal(find(actions, 'worktree', '.tmp/squashed/worktree').reason, 'detached HEAD');
+  assert.equal(find(actions, 'branch', 'feat/squashed').action, 'REMOVE');
+  assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'KEEP');
+  apply(git, actions);
+  assert.equal(existsSync(join(wt, 'b.txt')), true);
+});
+
+test('merge-commit merges count; shared slugs and missing base are handled', (t) => {
+  const { dir, repo, git } = fixture(); t.after(() => rmSync(dir, { recursive: true, force: true }));
+  git('checkout', '-q', '-b', 'feat/merged', 'main'); writeFileSync(join(repo, 'm.txt'), 'm\n'); git('add', 'm.txt'); git('commit', '-q', '-m', 'm');
+  git('checkout', '-q', 'main'); git('merge', '-q', '--no-ff', '--no-edit', 'feat/merged'); git('push', '-q', 'origin', 'main'); git('fetch', '-q', 'origin');
+  assert.equal(contentInBase(git, 'feat/merged'), true);
+  git('branch', 'fix/squashed', 'feat/open'); // open branch sharing the slug of a merged one
+  const { actions } = plan(git, { root: repo });
+  assert.equal(find(actions, 'tmp', '.tmp/squashed').action, 'KEEP');
+  assert.throws(() => plan(git, { root: repo, base: 'origin/nope' }), /origin\/nope not found/);
+});

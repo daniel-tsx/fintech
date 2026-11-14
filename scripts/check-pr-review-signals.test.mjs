@@ -92,7 +92,7 @@ test('code hygiene: debug output and TODOs without an issue link in app source; 
   const LOG = 'console' + '.log', TODO = 'TO' + 'DO';
   const d = [
     diff('apps/api/src/payments/payments.service.ts', `+  ${LOG}(intent);`, `+  // ${TODO}: retry later`, `+  // ${TODO}(#42): retry later`),
-    diff('apps/web/components/x.tsx', '+  debugger;'),
+    diff('apps/web/components/x.tsx', '+  debugger;', '+  // attach a debugger here'),
     diff('apps/api/test/unit/x.spec.ts', `+  ${LOG}(1); // ${TODO}`),
     diff('scripts/tool.mjs', `+ ${LOG}('ok');`),
   ].join('\n');

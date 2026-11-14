@@ -35,10 +35,10 @@ export const DOC_OWNERS = [
   [/^apps\/api\/src\/reconciliation\//, ['docs/reconciliation.md']],
   [/^apps\/api\/src\/(auth|audit|observability)\//, ['docs/security.md', 'docs/observability.md']],
   [/^apps\/web\//, ['docs/ui-signature.md']],
-  [/^(\.github\/workflows\/|scripts\/|package\.json$)/, ['docs/verification.md', 'docs/AI_WORKFLOW.md']],
+  [/^(\.github\/workflows\/|scripts\/)/, ['docs/verification.md', 'docs/AI_WORKFLOW.md']],
 ];
 const APP_SOURCE = /^apps\/[^/]+\/.*\.[cm]?[jt]sx?$/;
-const DEBUG_OUTPUT = /\bconsole\.(?:log|debug)\(|\bdebugger\b/;
+const DEBUG_OUTPUT = /\bconsole\.(?:log|debug)\(|^\s*debugger\s*;?\s*$/;
 const UNTRACKED_TODO = /\b(?:TODO|FIXME|XXX)\b/;
 const ISSUE_LINK = /#\d+|\/issues\/\d+/;
 const TEST_FILE = /(^|\/)test\/|\.(spec|test)\.[cm]?[jt]sx?$/;
