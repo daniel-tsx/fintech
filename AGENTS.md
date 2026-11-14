@@ -1,115 +1,112 @@
 # Agent guide — Fintech Lab
 
-This is a portfolio/reference payment platform. Financial correctness takes priority over convenience. Classify the [task size](#task-size) first; T1/T2 tasks then use [docs/AGENT_START_HERE.md](docs/AGENT_START_HERE.md) before editing behavior.
+A portfolio/reference payment platform. Financial correctness beats convenience. This file holds the rules every task needs; skills hold their own procedures.
 
 ## Start here
 
-1. Work on a task branch in your own worktree (see [Git and PRs](#git-and-prs)); inspect `git status` there and preserve existing work. If the worktree's `AGENTS.md` or `CLAUDE.md` differs from the copy loaded at session start, the worktree copy wins.
-2. Classify the task with [Task size](#task-size), state the size you chose, and read only what it requires. The size is the highest row that any changed file or behavior matches; reclassify upward as soon as the change reaches a T2 area.
-3. Verify documents against code. State the intended change and its verification; keep the diff surgical.
+1. Work in your own task worktree (see [Git and PRs](#git-and-prs)) and preserve existing work. If the worktree's `AGENTS.md` or `CLAUDE.md` differs from the copy loaded at session start, the worktree copy wins.
+2. Classify the task with [Task size](#task-size) and say which size you chose. The size is the highest row any changed file or behavior matches; reclassify upward as soon as the change reaches a T2 area.
+3. For T1/T2, the [reading matrix](docs/AGENT_START_HERE.md) says what to read. Before implementing, write `.tmp/<slug>/epic.md` with numbered acceptance criteria and keep `todo.md` current (the task reports in `ship-pr`). Verify documents against code and keep the diff surgical.
 
 ## Task size
 
-| Size | What counts | Read | Skills | Verify | Review |
-| --- | --- | --- | --- | --- | --- |
-| **T0 trivial** | Copy, typo, label/style, comment or doc wording; no behavior change | This file and the touched files | None | Cheapest relevant check for the touched package | Re-read the diff |
-| **T1 standard** | Bug fix, UI change, small feature or refactor outside T2 areas | T0 + `package.json`, the code entry points of the [reading matrix](docs/AGENT_START_HERE.md) row, and the one document owning the behavior you change | `ponytail`; `systematic-debugging` when the cause is unknown | [Verification commands](#verification-commands) for the touched package | `ponytail-review` of your own diff |
-| **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, runtime module wiring, provider integration, data deletion, security | T1 + `README.md`, every document in the matrix row and any [approved decision record](docs/AGENT_START_HERE.md#approved-decision-records) whose invariants the change could affect | T1 skills, `grilling` for unresolved decisions, `supabase-postgres-best-practices` for SQL | T1 + Docker integration when the change touches database, queue or transaction behavior | Independent reviewer (see Review below) |
+| Size | What counts | Read | Verify | Review |
+| --- | --- | --- | --- | --- |
+| **T0 trivial** | Copy, typo, label/style, comment or doc wording; no behavior change | This file and the touched files | Cheapest relevant check | Re-read the diff |
+| **T1 standard** | Bug fix, UI change, small feature or refactor outside T2 areas | T0 + `package.json`, the matrix row's code entry points, the one document owning the behavior | [Verification commands](#verification-commands) for the touched package | `ponytail-review` of your own diff |
+| **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, runtime module wiring, provider integration, data deletion, security | T1 + `README.md`, every document in the matrix row, and any [approved decision record](docs/AGENT_START_HERE.md#approved-decision-records) whose invariants the change could affect | T1 + Docker integration when database, queue or transaction behavior changes | Independent reviewer (`codex-review`) |
 
-Skill text saying "non-trivial" means T1 or T2. A bug with an unknown cause takes the size of the area it is in. `engineering-workflow` runs only when the user asks for it, normally for T2. `docs/README.md` is a navigation index, not required reading. Verification follows the boundary actually touched: a T2-area change that alters no database, queue or transaction behavior (for example, message text only) still gets T2 reading and review, but not Docker.
+Skill text saying "non-trivial" means T1 or T2. A bug with an unknown cause takes the size of its area. Verification follows the boundary actually touched: a T2-area change that alters no database, queue or transaction behavior still gets T2 reading and review, but not Docker.
 
 ## Verification commands
 
-Run from the root of your worktree. Open [verification](docs/verification.md) only for setup, environment or failure details.
+Run from the root of your worktree; [verification](docs/verification.md) owns setup and failure details.
 
 | Scope | Commands |
 | --- | --- |
-| Docs only | `git diff --check`; if links changed, confirm the relative links and anchors resolve |
+| Docs only | `git diff --check`; if links changed, confirm relative links and anchors resolve |
 | API code | `pnpm --filter @fintech-lab/api lint`, `... typecheck`, `... test` |
-| Web UI | `pnpm --filter @fintech-lab/web lint`, then `build`, then `typecheck` (build generates route types); no automated browser tests exist |
+| Web UI | `pnpm --filter @fintech-lab/web lint`, then `build`, then `typecheck` (build generates route types) |
 | PostgreSQL, migrations, durable financial effects | API checks + `pnpm test:verification` + `pnpm test:integration:docker` |
-| Redis/BullMQ, RabbitMQ, cross-service runtime | No isolated suite yet: run unit checks and report the boundary as NOT RUN |
+| Redis/BullMQ, RabbitMQ, cross-service runtime | No isolated suite yet: run unit checks and report the boundary NOT RUN |
 | Agent skills or workflow files | `node scripts/sync-agent-skills.mjs --check`, `node scripts/check-engineering-workflow.mjs` |
-| Before opening a PR, when application code changed | `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm typecheck` (PRs without application code use the rows above for their scope) |
+| Before a PR that changes application code | `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm typecheck` |
 
-Report each check as PASS, FAIL or NOT RUN with command, scope, counts and reason. Local runs are not hosted CI.
+Report each check as PASS, FAIL or NOT RUN with command, scope, counts and reason. Local runs are not hosted CI. Docker runs only through `pnpm test:integration:docker`, which uses fresh run-owned resources; never reuse existing databases, volumes or containers, and never run global Docker cleanup.
 
 ## Repository context
 
-- Repository slug: `fintech`. Workspace/application name: `fintech-lab`; package filters use `@fintech-lab/api` and `@fintech-lab/web`.
-- NestJS modular monolith in `apps/api`; Next.js inspection dashboard in `apps/web`.
-- Current provider is `StripePaymentProvider`. The deterministic Mock PSP exists in Git history, not the current runtime.
-- Provider commands: PostgreSQL outbox → relay → RabbitMQ → consumer → `PaymentProvider`.
+- Slug `fintech`, workspace `fintech-lab`; package filters `@fintech-lab/api` (NestJS modular monolith) and `@fintech-lab/web` (Next.js inspection dashboard). Node ≥22; pnpm pinned in `packageManager`.
+- Provider is `StripePaymentProvider`; the Mock PSP exists only in Git history. Provider commands: PostgreSQL outbox → relay → RabbitMQ → consumer → `PaymentProvider`.
 - BullMQ schedules inbox, internal settlement/payout and reconciliation work. PostgreSQL owns durable internal effects.
-- [Verification](docs/verification.md) owns setup, environment placement and detailed verification procedures. Node ≥22; pnpm is pinned in `packageManager`.
 
 ## Financial invariants
 
-- Workflow state, provider state and ledger state are separate. Provider success does not itself finalize a local capture or post a journal.
-- Preserve API idempotency scope, payload comparison and replayed status/body. Local intent, outbox, audit and replay response must commit atomically.
-- Preserve provider keys across retries/redelivery. Never generate a new key to work around an unknown outcome.
-- At-least-once delivery is expected. Queue IDs, Redis locks and broker ACKs are not financial uniqueness guarantees.
-- Ledger postings remain balanced, currency-isolated, immutable and unique by business reference. Corrections use compensating journals.
-- Captured ≠ settled; settled ≠ paid out. Settlement/payout here are internal lab accounting, not external bank transfers.
-- Do not change ledger semantics, fee/refund rounding, lock order or balance reservation casually. Explain the affected invariant and verify it explicitly.
-- `apps/api/drizzle/0000_cheerful_sunset_bain.sql` contains hand-written financial constraints/triggers. Do not replace it with generated SQL, use schema push, or destructively regenerate migration history.
-- Schema changes require a reviewed forward migration that preserves deferred balance checks, immutability, evidence protections and uniqueness.
-- Concurrency-sensitive changes need relevant PostgreSQL verification; unit mocks cannot prove locks or commit-time constraints. If unavailable, report the missing evidence.
+- Workflow, provider and ledger state are separate. Provider success does not itself finalize a local capture or post a journal.
+- Preserve API idempotency scope, payload comparison and replayed status/body. Local intent, outbox, audit and replay response commit atomically.
+- Preserve provider keys across retries and redelivery. Never generate a new key to work around an unknown outcome.
+- Delivery is at-least-once. Queue IDs, Redis locks and broker ACKs are not financial uniqueness guarantees.
+- Ledger postings stay balanced, currency-isolated, immutable and unique by business reference. Corrections use compensating journals.
+- Captured ≠ settled ≠ paid out. Settlement and payout are internal lab accounting, not bank transfers.
+- Do not change ledger semantics, fee/refund rounding, lock order or balance reservation casually: name the affected invariant and verify it explicitly.
+- `apps/api/drizzle/0000_cheerful_sunset_bain.sql` holds hand-written constraints and triggers. Never replace it with generated SQL, use schema push or regenerate migration history.
+- Schema changes need a reviewed forward migration that preserves deferred balance checks, immutability, evidence protections and uniqueness.
+- Unit mocks cannot prove locks or commit-time constraints. Concurrency-sensitive changes need PostgreSQL verification, or the missing evidence is reported.
 
 ## Scope and safety
 
 - Never print or commit private environment values. Checked-in demo identities and placeholder keys are local fixtures.
-- Use a disposable local database for integration tests; they append rows and intentionally do not delete immutable history.
-- No production data/migrations, real payments, live webhooks, deployment, cloud provisioning or remote push without explicit session authorization.
-- Builds/tests use mocked Stripe and broker boundaries. Do not start provider consumers or call reconciliation with real credentials as a verification shortcut.
-- Preserve the modular monolith and provider port. Avoid speculative financial/product features.
-- Documentation claims must point to implementation or executed checks. Separate implemented, inspected, tested and externally verified.
-- No fabricated users, metrics, testimonials, compliance claims or readiness guarantees. License choice belongs to the owner.
+- No production data or migrations, real payments, live webhooks, deployment, cloud provisioning, or push without explicit authorization in the session.
+- Builds and tests use mocked Stripe and broker boundaries. Never start provider consumers or call reconciliation with real credentials to verify something.
+- Preserve the modular monolith and provider port. No speculative financial or product features.
+- Documentation claims point to code or executed checks; separate implemented, inspected, tested and externally verified. No fabricated users, metrics, testimonials, compliance claims or readiness guarantees. License choice belongs to the owner.
+
+## Skills
+
+Load a skill only when its row applies; it then owns the procedure. Claude Code reads `.claude/skills/<name>/SKILL.md`, Codex `.agents/skills/<name>/SKILL.md`; prefer these repository copies over same-name global skills. This repository's rules and financial invariants win over any skill's minimalism heuristics or "always" language. [AI workflow](docs/AI_WORKFLOW.md) owns the work loop, payment review questions and skill provenance.
+
+| Skill | Use when |
+| --- | --- |
+| `ponytail` | Implementing any T1/T2 code change |
+| `ponytail-review` | Reviewing your own T1/T2 diff |
+| `systematic-debugging` | A bug, failure or behavior whose cause is unknown |
+| `grilling` | A T2 task, or a T1 product decision, still has unresolved design choices |
+| `supabase-postgres-best-practices` | SQL, indexes, schema, transactions, locking or connections (PostgreSQL-general; never assume Supabase) |
+| `codex-review` | Independent review: T2 diffs, T2 designs, CI or guard changes |
+| `ship-pr` | A finished task branch: task reports, final verification, PR description, push after authorization, post-merge cleanup |
+| `frontend-design` | Building new UI or reshaping it; stay within `docs/ui-signature.md` |
+| `vercel-react-best-practices` | T1/T2 React/Next.js behavior, data fetching, rendering or performance; read only the needed `rules/` |
+| `ponytail-audit` | An explicitly requested repository-wide audit |
+| `engineering-workflow` | Only when the user asks for it |
+
+- **T2 plans.** For T2 changes to schema, money semantics, locking or idempotency: write `.tmp/<slug>/plan.md` (≤200 lines: invariants, transaction boundaries, test matrix), run `codex-review` on it as a design, and get the user's approval before implementing. For a T2 task that spans several checkpoints, combines a migration with runtime changes or is likely to be interrupted, recommend `engineering-workflow` in one line and ask first.
+- **Reviews.** Give the independent reviewer the task brief, acceptance criteria and the diff or design, not your conclusions. Changes touching auth, tenancy, billing/payments or secrets also get Claude Code's `/security-review`. Report findings before fixing them.
+- **Browser checks.** When the host has a browser tool, check user-facing changes against `pnpm dev:web` on localhost; otherwise report browser verification NOT RUN.
 
 ## Files and artifacts
 
-Default to creating no new files. The deliverable is the code and tests the task needs; plans, reviews and evidence go in the chat, commit message or PR description.
-
-- **Temporary files** live only in one ignored directory per task: `.tmp/<task-slug>/` (`engineering-workflow` uses `.tmp/agent-workflows/<task-slug>/`). Never write to the `.tmp/` root or to tracked paths. Keep at most `plan.md`, the task reports `epic.md`, `todo.md`, `output.md` and `evidence.md` (defined in the `ship-pr` skill; `evidence.md` is the verification summary), one `review-<n>.md` per review and a `pr.md` draft. `engineering-workflow` has its own fixed set, listed in its SKILL.md step 3: `state.json`, `plan.md`, immutable reviewer reports, `verification.json`, `final-checks.json` and at most one compact `handoff.md`. A task worktree (`.tmp/<task-slug>/worktree`, or `.claude/worktrees/<name>` when the host creates it) is a checkout, not an artifact: remove it only with `git worktree remove` after its branch is merged or abandoned. Do not save full test-runner JSON, duplicate logs, source snapshots or diff copies; Git already holds them. Overwrite your own working files instead of versioning them; reviewer reports stay immutable. In `engineering-workflow`, a file recorded in `state.json` changes only through the state helper's next checkpoint, and none is edited or deleted otherwise before final human disposition.
-- **Cleanup:** a task's `.tmp` files are its resume source. Delete them only when the task is finalized (PR merged or rejected, or the human approved or rejected the result and the handoff is delivered) or the user explicitly abandons it. A paused or `HUMAN_APPROVAL` workflow is not finalized. At the end of each session, list what remains and why; if deletion is blocked, say so. Never read or reuse another task's `.tmp` directory unless asked; resuming a named workflow counts as asked.
-- **Permanent docs:** create a new Markdown file only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. No per-round, per-review or per-checkpoint reports in `docs/`, and no run logs appended to `docs/verification.md` (it owns commands). A durable human decision gets one short entry in `docs/decisions/` (context, decision, consequences; one page at most).
-- **Size limits:** plan ≤200 lines; review = findings only, ≤150 lines; decision entry ≤1 page. Needing more is a signal to split the task.
-- **Reading budget:** read what your [task size](#task-size) requires, then only what the code leads you to. `docs/audits/` and `docs/archive/` are historical and opt-in, except the [approved decision records](docs/AGENT_START_HERE.md#approved-decision-records): T2 work must read the record whose invariants the change could affect, and say so in the report when none applies. Do not browse the rest unless the task names a file. Never read whole folders "for context".
-- **Finish report** lists every file created, kept or deleted, including temporary ones.
-
-## Agent Workflow & Skill Routing
-
-Use skills conditionally and in proportion to the task. Load only the relevant entry point and supporting references as needed; prefer one primary skill per activity, adding another only for distinct value. This routing and explicit user requests determine activation; upstream "always", "any task" or session-wide language does not extend activation to unrelated activities. Once selected, follow the skill's procedure and confirmation gates. Repository safety rules, financial invariants and task-specific review requirements take precedence over code-minimalism heuristics. This section owns shared routing; [AI workflow](docs/AI_WORKFLOW.md) owns the existing work loop and payment review questions.
-
-For vendored skills, load the repository copy from `.agents/skills/<name>/SKILL.md` in Codex or `.claude/skills/<name>/SKILL.md` in Claude Code. Same-name global skills can coexist or take precedence in a host's selector; read the local file explicitly when necessary. Do not combine competing versions. Codex uses `$skill-name`; Claude Code uses `/skill-name`.
-
-- **Autonomous orchestration (explicit requests only):** For a requested end-to-end, reviewed high-risk workflow, use local `engineering-workflow` (`$engineering-workflow` in Codex, `/engineering-workflow` in Claude Code). It coordinates planning, fresh independent review, verification, bounded corrections and human approval. Follow all financial/sandbox rules above. Do not auto-trigger it for routine tasks or allow it to auto-commit/push/activate money movement. Its temporary handoffs belong under ignored `.tmp/agent-workflows/`.
-- **Planning:** Inspect the repository and relevant documentation first. For T2 tasks, or T1 tasks with unresolved product decisions, use `grilling` when important design decisions or trade-offs remain unresolved. Ask focused questions with recommendations; discover facts independently. Keep the plan and acceptance criteria in the chat or the task's `.tmp` directory; record durable decisions in `docs/decisions/` (see [Files and artifacts](#files-and-artifacts)). For T1/T2, start `.tmp/<slug>/epic.md` (problem, goal, scope, numbered acceptance criteria) before implementing and keep `todo.md` current. Obtain approval before implementing unresolved high-risk decisions. For T2 changes to schema, money semantics, locking or idempotency, write a plan of at most 200 lines (invariants, transaction boundaries, test matrix) in `.tmp/<slug>/plan.md`, run `codex-review` on it as a design, and get the user's approval before implementing. For a T2 task that spans several checkpoints, combines a migration with runtime changes, or is likely to be interrupted, recommend `engineering-workflow` in one line with the reason and ask before starting; otherwise use this normal T2 flow. When the user asks for a single approval at the end (for example a design-only task), list the open decisions with recommendations instead of interviewing round by round. Skip grilling and unnecessary planning for trivial or well-specified tasks.
-- **Implementation:** For T1/T2 code changes, apply `ponytail`. Reuse existing components, utilities, services and conventions; choose the smallest complete implementation without speculative abstractions or unnecessary dependencies. Preserve correctness, security, validation, error handling and domain invariants. Check affected callers and integrations; add focused tests for meaningful new logic. Its session mode does not make trivial tasks require extra ceremony.
-- **Debugging:** Use `systematic-debugging` when non-trivial bugs, recurring failures, unexpected behavior or difficult test failures require investigation: reproduce, gather evidence, test hypotheses, then verify the root-cause fix with a regression. Skip it for trivial fixes with an established cause.
-- **Database work:** Use `supabase-postgres-best-practices` for PostgreSQL queries, indexes, schema design, transactions, concurrency, locking, connections or performance. Read only relevant rules, apply PostgreSQL-general guidance, and never assume Supabase infrastructure or APIs. Preserve the financial/database invariants above.
-- **Review:** For T1/T2 changes, apply `ponytail-review` as an additional quality review, alongside applicable domain-specific review skills and the existing payment checklist. Trace the complete affected flow, including correctness, regressions, security, concurrency, performance, tests and unnecessary complexity. T2 and CI or guard changes require an independent reviewer: run the local `codex-review` skill (Codex, read-only, against `origin/main`; it covers designs too and falls back to a fresh read-only subagent when Codex cannot run). Give the reviewer the task brief, acceptance criteria and the diff or design, not your conclusions or claims about scope. Changes touching auth, tenancy, billing/payments or secrets also get Claude Code's built-in `/security-review`. Put a findings summary in the PR. Report concrete findings before fixing them; the review itself changes no code.
-- **Audit:** Use `ponytail-audit` for explicit repository-wide audits or major audit tasks. Do not run a whole-repository audit for each implementation.
-- **Verification:** Select checks by task size from [Verification commands](#verification-commands) during planning. Require Docker-backed integration tests for migrations, PostgreSQL/Redis integrations, brokers or multi-service runtime changes; Docker is optional for UI, documentation and logic sufficiently covered by unit tests. Run Docker integration through `pnpm test:integration:docker`, which also removes its own spec byproducts from `.tmp/` after a passing run; a direct `pnpm test:integration` leaves them behind. Docker runs use fresh run-owned resources and free ports; never reuse existing databases, volumes or containers, or run global Docker cleanup. Report each planned check as PASS, FAIL or NOT RUN with its command, scope and reason. Unavailable Docker leaves affected boundaries unverified without blocking unrelated work. Resolve blocking findings and record valuable lessons in existing owning documents or casebook conventions.
-
-Skill provenance, synchronization and discovery checks are documented in [AI workflow](docs/AI_WORKFLOW.md#portable-agent-skills).
-
-## Frontend skills
-
-- `frontend-design` sets the visual direction (typography, palette, layout identity) when building new UI or reshaping existing UI; skip it for small fixes inside an established design. Keep its output within `docs/ui-signature.md` conventions once those are set.
-- `vercel-react-best-practices` is vendored like the other skills: use it for T1/T2 React/Next.js behavior, data-fetching, rendering or performance work, and read only the `rules/` files the task needs. Skip it for copy or styling-only changes.
-- Browser verification: when the host has a browser tool (`agent-browser`, or the desktop app's built-in browser), use it to check user-facing interaction or layout against `pnpm dev:web` on localhost. Otherwise report browser verification as NOT RUN. Do not install browser tooling automatically or touch production data.
+- Default to no new files. Plans, reviews and evidence go in the chat, commit messages or the PR description.
+- Temporary files live only in the ignored `.tmp/<task-slug>/` of their task (`engineering-workflow`: `.tmp/agent-workflows/<task-slug>/`), never in `.tmp/` itself or tracked paths. The allowed files are the task reports and drafts listed in `ship-pr`, and `engineering-workflow`'s own set in its step 3. No full test-runner output, duplicate logs, source snapshots or diff copies.
+- A task's `.tmp` files are its resume source: delete them only when it is finalized (merged, rejected, or explicitly abandoned), as `ship-pr` step 8 does. Never read or reuse another task's `.tmp` unless asked. At the end of a session, list what remains and why.
+- Size limits: plan ≤200 lines, review report findings only and ≤150 lines, decision entry ≤1 page. Needing more means the task should be split.
+- New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. A durable human decision gets one entry of at most a page in `docs/decisions/`.
+- `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Never read whole folders for context.
 
 ## Git and PRs
 
-- One branch per task from freshly fetched `origin/main`, without upstream tracking so a bare `git push` cannot target `main`: `git fetch origin`, then `git worktree add --no-track -b <type>/<slug> .tmp/<slug>/worktree origin/main` (or use a worktree the host creates in `.claude/worktrees/`). Types: `feat/`, `fix/`, `chore/`, `docs/`; the slug does not repeat the type (`docs/heading-fix`, not `docs/docs-heading-fix`). If the branch or worktree already exists, choose a new slug unless the user asked you to resume that task. Never commit to `main`.
-- Commit locally on the task branch when a checkpoint passes its checks, using Conventional Commits. A user instruction not to commit overrides this, and `engineering-workflow` runs keep their own no-automatic-commit rule.
-- Prepare and open PRs with the local `ship-pr` skill. Push, PR creation and merge need explicit user authorization in the session. Merging is always the human's decision: squash merge after required checks pass.
-- `ship-pr` runs a final verification gate on the SHA to be pushed, then builds the PR description from the [template](.github/pull_request_template.md) and the task reports (epic, output, todo, evidence), including the **review guide** (what to read carefully, what is mechanical, where you are least confident, any removed or weakened tests). The PR description is the durable record; the reports are never committed and nothing goes into `docs/`.
-- CI's *Review signals* job labels PRs touching T2 paths `t2-area` (the label wins over a smaller claimed size) and PRs changing CI or guard scripts `guard-change` (independent review, no T2 reading). It fails on focused tests and on new skips other than the env-gated suite alias or a `// allow-skip: <reason>` comment; every allowed skip is listed for human approval. Never weaken a test to make a check pass.
-- Hosted CI counts only for the exact head SHA, read from the run (for example `gh pr checks`); never infer it from local runs. It is a merge gate, not a pre-PR gate: before a push it is reported as NOT RUN.
-- Existing migrations are append-only: CI (`scripts/check-migration-history.mjs`) rejects PRs that modify, rename or delete an existing SQL migration or snapshot, or change, remove or reorder an existing journal entry. New migrations, snapshots and appended journal entries pass. Number a new migration only after rebasing onto the latest `main`, give its journal entry a `when` greater than every existing entry (the drizzle migrator silently skips older ones; CI checks this), and rebase again if another PR adds a migration first.
+- One branch and worktree per task, from freshly fetched `origin/main` and without upstream tracking: `git fetch origin`, then `git worktree add --no-track -b <type>/<slug> .tmp/<slug>/worktree origin/main` (or a host-created `.claude/worktrees/` worktree). Types `feat/`, `fix/`, `chore/`, `docs/`; the slug does not repeat the type. If the branch exists, choose a new slug unless resuming that task. Never commit to `main`.
+- Commit locally with Conventional Commits when a checkpoint passes its checks, unless the user said not to; `engineering-workflow` keeps its own no-commit rule.
+- Every PR targets `main`. Do not stack PRs on other task branches: a PR merged into another branch never reaches `main`.
+- Ship with `ship-pr`. Push, PR creation and merge need explicit authorization in the session; merging is always the human's (squash, after required checks pass). The PR description is the durable record.
+- Never weaken or skip a test to make a check pass. CI labels T2 paths `t2-area` (overriding a smaller claimed size) and fails on focused tests and unapproved skips. Hosted CI counts only for the exact head SHA.
+- Migrations are append-only (CI enforces it). Number a new one only after rebasing on the latest `main`, give its journal entry a `when` greater than every existing one (drizzle silently skips older ones), and rebase again if another PR adds a migration first.
 
 ## Finish
 
-Run the checks your [task size](#task-size) requires. Before completing a task, assess whether architecture, API contracts, database schemas, business behavior or operational procedures changed; update the owning document when needed and keep the index and links current. Avoid documentation churn for trivial implementation details. Report changed files, executed checks, failures, unverified boundaries, assumptions and next steps. Commit, push and PRs follow [Git and PRs](#git-and-prs).
+- Run the checks your size requires and report PASS, FAIL or NOT RUN for each.
+- If architecture, API contracts, schemas, business behavior or operational procedures changed, update the owning document and its links in the same PR; skip doc churn for implementation details.
+- Report changed files, checks, failures, unverified boundaries, assumptions, next steps, and every file created, kept or deleted, including temporary ones.
+
+## Maintaining this file
+
+Add a rule only after a real failure that a script, CI check or skill cannot catch; prefer enforcing it in tooling. A procedure belongs in its skill, a command detail in [verification](docs/verification.md). Keep this file at or below its current size (about 1,700 words) and remove rules agents follow without being told.
