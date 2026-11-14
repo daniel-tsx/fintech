@@ -76,7 +76,9 @@ test('with merged-PR evidence: only clean merged work is DONE; dirty, open, stac
   const cmds = removalCommands(actions);
   assert.equal(cmds.length, 3);
   assert.match(cmds[0], /^git worktree remove .*\.tmp\/squashed\/worktree$/);
-  assert.equal(cmds[1], 'git branch -D feat/squashed');
+  assert.equal(cmds[1], `git update-ref -d refs/heads/feat/squashed ${prs.get('feat/squashed')}`);
+  assert.equal(removalCommands([{ kind: 'tmp', action: 'DONE', target: '/a b/$x' }])[0], "rm -r '/a b/$x'");
+  assert.match(removalCommands([{ kind: 'tmp', action: 'DONE', target: "/a/it's" }])[0], /^# quote by hand: /);
   assert.match(cmds[2], /^rm -r .*\.tmp\/squashed$/);
   // Report only: planning changed nothing on disk or in refs.
   assert.equal(existsSync(join(repo, '.tmp/squashed/worktree')), true);

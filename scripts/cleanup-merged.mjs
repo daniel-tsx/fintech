@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Post-merge cleanup REPORT for task worktrees, local branches and .tmp/<slug>/ directories.
-// It never deletes anything: it prints what is done (DONE), what to keep (KEEP) and what a human
+// It never deletes anything (it only fetches when given --fetch): it prints what is done (DONE), what to keep (KEEP) and what a human
 // should look at (REVIEW), with the commands to remove DONE entries by hand.
 //
 // A branch is DONE only on positive evidence: a PR merged into main whose head is exactly the
@@ -83,7 +83,7 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
   }
   for (const b of branches) {
     if (keepBranch.has(b)) actions.push({ kind: 'branch', target: b, action: 'KEEP', reason: 'worktree kept' });
-    else if (merged.get(b)) actions.push({ kind: 'branch', target: b, action: 'DONE', reason: 'PR merged into main at this tip' });
+    else if (merged.get(b)) actions.push({ kind: 'branch', target: b, action: 'DONE', reason: 'PR merged into main at this tip', sha: git('rev-parse', b) });
     else if (looksMerged(git, b, base)) actions.push({ kind: 'branch', target: b, action: 'REVIEW', reason: 'changes appear in main but no merged PR matches; delete by hand if done' });
     else actions.push({ kind: 'branch', target: b, action: 'KEEP', reason: 'open' });
   }
@@ -101,7 +101,7 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
     if (slug === 'agent-workflows') reason = 'engineering-workflow handoffs are finalized by a human';
     else if (keptWorktrees.some((p) => p === resolve(dir) || p.startsWith(resolve(dir) + sep))) reason = 'holds a worktree that is kept';
     else if (live.has(slug)) reason = 'a branch with this slug is still open';
-    else if (owner) { action = 'DONE'; reason = `${owner}: PR merged into main`; }
+    else if (owner) { action = 'DONE'; reason = `${owner}: PR merged into main (check for files added after the merge)`; }
     else {
       const days = Math.floor((now - statSync(dir).mtimeMs) / 86_400_000);
       action = 'REVIEW'; reason = days >= STALE_DAYS ? `no branch, untouched ${days} days` : 'no matching branch';
@@ -117,9 +117,14 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
 
 /** Commands a human can run to remove the DONE entries; printed, never executed. */
 export function removalCommands(actions) {
-  const q = (s) => (/[^\w./:@-]/.test(s) ? `"${s}"` : s);
-  return actions.filter((a) => a.action === 'DONE').map((a) =>
-    a.kind === 'worktree' ? `git worktree remove ${q(a.target)}` : a.kind === 'branch' ? `git branch -D ${q(a.target)}` : `rm -r ${q(a.target)}`);
+  // Single quotes stop $ and ` expansion in bash and PowerShell; they escape ' differently, so a path
+  // containing ' is printed as a comment to quote by hand.
+  const q = (s) => (/[^\w./:@-]/.test(s) ? `'${s}'` : s);
+  // update-ref with the expected SHA refuses to delete a branch that moved after this report.
+  return actions.filter((a) => a.action === 'DONE').map((a) => {
+    const cmd = a.kind === 'worktree' ? `git worktree remove ${q(a.target)}` : a.kind === 'branch' ? `git update-ref -d ${q(`refs/heads/${a.target}`)} ${a.sha}` : `rm -r ${q(a.target)}`;
+    return a.target.includes("'") ? `# quote by hand: ${cmd}` : cmd;
+  });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -128,7 +133,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const git = makeGit(process.cwd());
     const root = dirname(resolve(git('rev-parse', '--path-format=absolute', '--git-common-dir')));
-    if (!args.has('--no-fetch')) git('fetch', 'origin', '--prune');
+    if (args.has('--fetch')) git('fetch', 'origin', '--prune');
     const { actions, remote, prData } = plan(git, { root, mergedHeads: loadMergedHeads(process.cwd()) });
     for (const a of actions) console.log(`${a.action.padEnd(6)} ${a.kind.padEnd(8)} ${a.target}  (${a.reason})`);
     if (!prData) console.log('\n`gh` unavailable or not signed in: no merged-PR evidence, so nothing is DONE.');
