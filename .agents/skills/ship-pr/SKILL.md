@@ -1,11 +1,20 @@
 ---
 name: ship-pr
-description: Prepare a finished task branch for a pull request (rebase, guards, pre-PR checks, review prerequisites, PR description from the template) and push or open the PR only after explicit user authorization. Use when a T1/T2 task is done; T0 changes may use it too.
+description: Prepare a finished task branch for a pull request (rebase, guards, pre-PR checks, review prerequisites, final verification, PR description built from the task reports) and push or open the PR only after explicit user authorization. Use when a T1/T2 task is done; T0 changes may use it too.
 ---
 
 # Ship a PR
 
 Never push, open or merge a PR without the user's explicit go-ahead in this session. Merging is always the human's.
+
+## Task reports
+T1/T2 tasks keep four short reports in `.tmp/<task-slug>/`. They become the PR description, which is the durable record; they are never committed. T0 needs none: the PR states what and why, and the checks.
+- `epic.md`, written when the task starts: problem, goal, scope and non-goals, task size, invariants or boundaries touched, and numbered acceptance criteria (AC1, AC2…). It is also the `codex-review` brief.
+- `todo.md`, kept current while working: the steps and ACs as a checklist, open blocking items, and follow-ups left for later PRs. Optional for T1.
+- `output.md`, at the end: what was delivered, by area and with its files; behavior, API, schema or config changes; docs updated; what was deliberately not done.
+- `evidence.md`, at final verification: for each AC, the proof on the final SHA (command and result, test names, screenshots) or NOT VERIFIED with the reason; every check as PASS, FAIL or NOT RUN; reviews with findings and their disposition; unverified boundaries.
+
+Facts only: every claim points to a command, test, file or review. Keep each report short; evidence may be the longest, at most 150 lines.
 
 ## 1. Bring the branch up to date
 - In the task worktree, the tree is clean and everything is committed.
@@ -23,16 +32,27 @@ Run the pre-PR set and any size-specific checks from AGENTS.md *Verification com
 - T2, CI or guard changes: `codex-review` on the current HEAD. If commits landed after that review, review again.
 - Auth, tenancy, billing/payments or secrets: also run `/security-review` in Claude Code.
 
-## 5. PR description
-Write `.tmp/<task-slug>/pr.md` from `.github/pull_request_template.md`, including the review guide. Use only evidence from commands you actually ran; hosted CI is NOT RUN until the PR exists. Title: a Conventional Commit line.
+## 5. Final verification
+After the last change, on the commit you will push:
+1. The tree is clean and rebased on `origin/main`. Record `git rev-parse HEAD` as the final SHA.
+2. The guards (step 2) and checks (step 3) ran on the final SHA. Rerun any that ran on an earlier commit.
+3. Every AC in `epic.md` has evidence on the final SHA, or is marked NOT VERIFIED with a reason and listed as an unverified boundary.
+4. Every file in `git diff --name-only origin/main...HEAD` is accounted for in `output.md`. Remove or explain anything else: debug code, stray files, unrelated edits.
+5. `todo.md` has no open blocking item.
+6. The required reviews (step 4) ran on the final SHA, and every finding is resolved or handed to the user.
 
-## 6. Ask, then ship
-Show the user the branch, title and a three-line summary, and ask to push and open the PR. Only after a yes:
+Verdict: READY, or NOT READY naming the failed items. NOT READY stops here: fix, commit, and run this step again.
+
+## 6. PR description
+Write `.tmp/<task-slug>/pr.md` from `.github/pull_request_template.md`: what and why (from the epic), the review guide, the final verification verdict with its SHA, then the four reports in their collapsible sections. Hosted CI is NOT RUN until the PR exists. Title: a Conventional Commit line.
+
+## 7. Ask, then ship
+Show the user the branch, title, verdict and a three-line summary, and ask to push and open the PR. Only after a yes:
 ```sh
 git push -u origin <type>/<slug>        # always an explicit branch, never a bare push
 gh pr create --base main --head <type>/<slug> --title "<title>" --body-file .tmp/<task-slug>/pr.md
 ```
-(or the host's GitHub tools). Report the PR URL. Watch checks (`gh pr checks`) only if asked; never merge.
+(or the host's GitHub tools; where GraphQL is unavailable, use the REST API: `gh api repos/{owner}/{repo}/pulls -f title=… -f head=… -f base=main -F body=@.tmp/<task-slug>/pr.md`). Report the PR URL. Watch checks (`gh pr checks`) only if asked; never merge.
 
-## 7. After the merge
+## 8. After the merge
 When the user confirms the merge: remove the worktree with `git worktree remove`, delete the local branch, and delete the task's `.tmp` files.

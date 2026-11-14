@@ -1,8 +1,8 @@
-<!-- Agents and humans: fill every section. Write "n/a" rather than deleting one. -->
+<!-- T1/T2: ship-pr builds this from the task reports in .tmp/<task-slug>/ (epic, output, todo, evidence) after final verification. T0: fill "What and why" and "Final verification", and delete "Reports". -->
 
 ## What and why
 
-<!-- One or two sentences. Link the issue or decision if there is one. -->
+<!-- Two or three sentences from the epic: the problem and what this PR changes. Link the issue or decision if there is one. -->
 
 ## Review guide
 
@@ -12,26 +12,36 @@
 - Least confident about: …
 - Tests removed, weakened or skipped: list each with the reason, or "none". -->
 
-## Task size
+## Final verification
 
-<!-- T0 / T1 / T2 (see AGENTS.md#task-size). For T2, name each financial invariant touched and its transaction boundary. -->
+<!-- READY @ <final SHA>, task size T0/T1/T2. One line each: checks (PASS/FAIL/NOT RUN), acceptance criteria verified (n of m), diff accounted for, blocking TODOs (none), reviews on the final SHA. Hosted CI runs on this PR. -->
 
-## Checks
+## Reports
 
-<!-- One line per planned check: PASS / FAIL / NOT RUN, the command, scope and counts. Local runs are not hosted CI. -->
+<details>
+<summary>Epic: problem, goal, scope, acceptance criteria</summary>
 
-| Result | Command | Scope / notes |
-| --- | --- | --- |
-|  |  |  |
+<!-- epic.md -->
 
-## Unverified boundaries
+</details>
 
-<!-- What this change could affect that no executed check covers (e.g. Redis/RabbitMQ, browser, real provider). -->
+<details>
+<summary>Output: what was delivered</summary>
 
-## Review
+<!-- output.md -->
 
-<!-- T1: self-review with ponytail-review. T2: independent reviewer (who/what ran it) and a summary of findings and their disposition. engineering-workflow runs: task slug and final verdict. -->
+</details>
 
-## Docs and temporary files
+<details>
+<summary>TODO: checklist, blocking items, follow-ups</summary>
 
-<!-- Owning documents updated, or why none needed. What remains under .tmp/<task-slug>/ (kept until merge or rejection), or "none". Approved decision records consulted (T2). -->
+<!-- todo.md -->
+
+</details>
+
+<details>
+<summary>Evidence: proof per acceptance criterion, checks, reviews, unverified boundaries</summary>
+
+<!-- evidence.md -->
+
+</details>
