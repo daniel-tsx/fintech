@@ -24,7 +24,7 @@ After an `engineering-workflow` run, build the reports from its artifacts instea
 
 ## 2. Guards
 - New migrations: the number follows the latest on `origin/main`, the journal entry is appended with a newer `when`. Run `node scripts/check-migration-history.mjs origin/main HEAD`.
-- `node scripts/check-pr-review-signals.mjs origin/main HEAD`. If it lists T2-area files but the task was classified lower, reclassify and meet the T2 obligations before continuing. Treat a CI or guard change as needing an independent review.
+- `node scripts/check-pr-review-signals.mjs origin/main HEAD`. If it lists T2-area files but the task was classified lower, reclassify and meet the T2 obligations before continuing. Treat a CI or guard change as needing an independent review. If it lists *Docs to check*, update the owning document or put "Docs: no change — <reason>" in the PR's *What and why*.
 
 ## 3. Checks
 Run the checks AGENTS.md *Verification commands* requires for what changed: the full pre-PR set when application code changed, otherwise the rows for the touched scope (docs, agent skills or workflow files), plus any size-specific checks. Any FAIL stops here. Report every planned check as PASS, FAIL or NOT RUN with the reason.
@@ -67,4 +67,10 @@ gh pr create --base main --head <type>/<slug> --title "<title>" --body-file .tmp
 (or the host's GitHub tools; where GraphQL is unavailable, use the REST API: `gh api repos/{owner}/{repo}/pulls -f title=… -f head=… -f base=main -F body=@.tmp/<task-slug>/pr.md`). Report the PR URL. Watch checks (`gh pr checks`) only if asked; never merge.
 
 ## 8. After the merge
-When the user confirms the merge: remove the worktree with `git worktree remove`, delete the local branch, and delete the task's `.tmp` files.
+When the user confirms the merge:
+- Offer to open a GitHub issue for each follow-up in `todo.md` (they are also in the PR description).
+- Remove only this task's own work, from the main checkout. Stop and ask the user if any check fails or any command errors:
+  1. The PR merged into `main` at this branch's tip: `gh api "repos/{owner}/{repo}/pulls/<n>" --jq '[.merged_at, .base.ref, .head.sha]'` shows a merge time and `main`; `.head.sha` equals `git rev-parse <type>/<slug>` and `git -C <worktree> rev-parse HEAD`, and `git worktree list --porcelain` shows `branch refs/heads/<type>/<slug>` for that worktree (not detached, not mid-rebase).
+  2. The worktree holds nothing to keep: `git -C <worktree> -c status.showUntrackedFiles=all status --porcelain --ignored=matching --untracked-files=all` lists only regenerable output (`node_modules`, `.next`, `dist`, `build`, `coverage`, `.turbo`, `*.tsbuildinfo`); `git -C <worktree> ls-files -v` shows no lowercase or `S` tags (hidden edits); `git worktree list --porcelain` does not mark it `locked`.
+  3. `git worktree remove <worktree>`; confirm the directory is gone. Then `git update-ref -d refs/heads/<type>/<slug> <head.sha>` (refuses if the branch moved). Then delete `.tmp/<task-slug>/` by its literal path (never through a variable that could be empty), only after `git worktree list --porcelain` shows no worktree under it.
+- Run `pnpm cleanup` and report anything else it lists as DONE or REVIEW. It deletes nothing; other tasks' work and remote branches are removed only by the user or with their approval (GitHub deletes merged head branches itself when "Automatically delete head branches" is on).

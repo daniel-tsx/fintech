@@ -93,6 +93,13 @@ Two-skill extension verification on **2026-10-20**: both installed hosts returne
 
 The host discovery checks above establish loading, not model compliance. Fresh interactive sessions still need the import/path and conditional-activation spot checks above; no end-to-end model interview, implementation or audit is claimed by this setup.
 
+## Keeping the repository clean
+
+- **After a merge**, `ship-pr` step 8 removes that task's own worktree, branch and `.tmp/<slug>/` after checking the merged PR and the worktree. For everything else, run `pnpm cleanup` from the main checkout (add `--fetch` to refresh remote refs first): a report that deletes nothing; remove DONE entries one task at a time with the checks in `ship-pr` step 8. An entry is DONE only on positive evidence: a PR merged into `main` whose head is exactly the branch tip (read with `gh`; without it nothing is DONE). Branches whose changes merely appear in `main` are listed for REVIEW, because content alone cannot tell a finished branch from one with no commits yet or one stacked on another task. It keeps dirty (untracked files counted whatever the git config), locked or detached worktrees, worktrees with hidden (skip-worktree/assume-unchanged) edits, worktrees holding ignored files of their own (such as `.env`), any `.tmp/<slug>/` that still holds a kept worktree, and `.tmp/agent-workflows/`. Remote branches are only listed, as of the last fetch. `ship-pr` step 8 runs it.
+- **Every PR targets `main`.** A PR merged into another task branch never reaches `main`; the stacked web UI PRs #10–#12 did exactly that.
+- **Review signals** also warn, without failing, when code in a mapped area (API modules, migrations, web UI, CI and scripts; see `DOC_OWNERS` in the script) changes but none of its owning documents from the [reading matrix](AGENT_START_HERE.md) do, and when application code gains `console.log`/`debugger` or a TODO/FIXME without an issue link. Update the document, or write "Docs: no change — <reason>" in the PR.
+- **Repository settings** (owner-managed): automatically delete head branches, and allow squash merging only.
+
 ## Handoff
 
 Report what was inspected, changed and executed; show failures and missing evidence plainly. Link the source-of-truth document and propose the next focused audit. Do not convert a configured CI job into a passed CI claim or a seeded dashboard into an end-to-end provider demo.

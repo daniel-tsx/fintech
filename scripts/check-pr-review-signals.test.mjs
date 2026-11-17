@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeTestDiff, guardFiles, skipReason, t2Files } from './check-pr-review-signals.mjs';
+import { analyzeTestDiff, codeHygiene, docsToCheck, guardFiles, skipReason, t2Files } from './check-pr-review-signals.mjs';
 
 // Keywords are split so this file never trips the guard itself.
 const ONLY = 'it' + '.only', SKIP = 'describe' + '.skip', WEAK = 'toBe' + 'Defined';
@@ -78,4 +78,27 @@ test('skips outside test files are ignored', () => {
 test('removed test cases are listed, renamed-in-place ones are not', () => {
   const r = analyzeTestDiff(diff(SPEC, "-it('rejects unbalanced journals', () => {})", "-it('kept title', () => {})", "+it('kept title', () => { /* edited */ })"));
   assert.deepEqual(r.removedTests, [{ file: SPEC, title: 'rejects unbalanced journals' }]);
+});
+
+test('docs to check: code without any owning document is listed; tests and covered areas are not', () => {
+  assert.deepEqual(docsToCheck([
+    'apps/api/src/ledger/ledger.service.ts', 'docs/ledger.md',
+    'apps/web/app/page.tsx', 'apps/api/test/unit/refunds.spec.ts', 'README.md',
+  ]), [{ files: ['apps/web/app/page.tsx'], docs: ['docs/ui-signature.md'] }]);
+  assert.deepEqual(docsToCheck(['apps/api/drizzle/0015_x.sql', 'docs/database-design.md']), []);
+});
+
+test('code hygiene: debug output and TODOs without an issue link in app source; tests and scripts ignored', () => {
+  const LOG = 'console' + '.log', TODO = 'TO' + 'DO';
+  const d = [
+    diff('apps/api/src/payments/payments.service.ts', `+  ${LOG}(intent);`, `+  // ${TODO}: retry later`, `+  // ${TODO}(#42): retry later`),
+    diff('apps/web/components/x.tsx', '+  debugger;', '+  // attach a debugger here'),
+    diff('apps/api/test/unit/x.spec.ts', `+  ${LOG}(1); // ${TODO}`),
+    diff('scripts/tool.mjs', `+ ${LOG}('ok');`),
+  ].join('\n');
+  assert.deepEqual(codeHygiene(d), [
+    `apps/api/src/payments/payments.service.ts: debug output added: ${LOG}(intent);`,
+    `apps/api/src/payments/payments.service.ts: TODO/FIXME without an issue link: // ${TODO}: retry later`,
+    'apps/web/components/x.tsx: debug output added: debugger;',
+  ]);
 });
