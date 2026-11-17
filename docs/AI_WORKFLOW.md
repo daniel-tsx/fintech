@@ -33,7 +33,7 @@ The approach is an original adaptation inspired by [Superpowers subagent-driven 
 
 ## Portable agent skills
 
-[Agent Workflow & Skill Routing](../AGENTS.md#agent-workflow--skill-routing) is the single source of shared routing rules. Claude Code imports it through `@AGENTS.md` in [CLAUDE.md](../CLAUDE.md). The skills are real repository files in `.agents/skills/` for Codex and `.claude/skills/` for Claude Code; no symlinks, lifecycle hooks, global settings or application dependencies are installed.
+[Skills](../AGENTS.md#skills) is the single source of shared routing rules. Claude Code imports it through `@AGENTS.md` in [CLAUDE.md](../CLAUDE.md). The skills are real repository files in `.agents/skills/` for Codex and `.claude/skills/` for Claude Code; no symlinks, lifecycle hooks, global settings or application dependencies are installed.
 
 ### Sources and maintenance
 
