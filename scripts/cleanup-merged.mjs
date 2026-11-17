@@ -8,8 +8,9 @@
 // branch tip (GitHub REST API via `gh`). Content heuristics cannot tell a finished branch from a
 // task that has no commits yet or one stacked on another task, so a branch whose changes merely
 // look present in origin/main is marked REVIEW and never removed automatically.
-// main, the main or current checkout, dirty/locked worktrees, worktrees holding ignored files of
-// their own (.env, notes), .tmp/agent-workflows/ and remote branches are never DONE.
+// main, the main or current checkout, dirty, locked or detached worktrees, worktrees with hidden
+// (skip-worktree/assume-unchanged) edits or ignored files of their own (.env, notes),
+// .tmp/agent-workflows/ and remote branches are never DONE.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -42,7 +43,7 @@ export function parseWorktrees(porcelain) {
   });
 }
 
-/** Map of branch -> head SHA for PRs merged into main; empty when `gh` is unavailable or fails. */
+/** Map of branch -> head SHAs of PRs merged into main; null when `gh` is unavailable or fails. */
 export function loadMergedHeads(cwd) {
   try {
     const out = execFileSync('gh', ['api', '--paginate', 'repos/{owner}/{repo}/pulls?state=closed&base=main&per_page=100',
