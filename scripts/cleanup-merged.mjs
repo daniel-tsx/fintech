@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Post-merge cleanup REPORT for task worktrees, local branches and .tmp/<slug>/ directories.
-// It never deletes anything (it only fetches when given --fetch): it prints what is done (DONE), what to keep (KEEP) and what a human
-// should look at (REVIEW), with the commands to remove DONE entries by hand.
+// It deletes nothing and changes no refs (it fetches only when given --fetch; `merge-tree` may write
+// loose objects): it prints what is done (DONE), what to keep (KEEP) and what to look at (REVIEW).
+// Removal follows ship-pr step 8, one task at a time.
 //
 // A branch is DONE only on positive evidence: a PR merged into main whose head is exactly the
 // branch tip (GitHub REST API via `gh`). Content heuristics cannot tell a finished branch from a
@@ -19,7 +20,8 @@ const STALE_DAYS = 14;
 const DISPOSABLE = /^(node_modules|\.next|dist|build|coverage|\.turbo)(\/|$)|(^|\/)(node_modules|\.next|dist|build|coverage|\.turbo)\/|\.tsbuildinfo$/;
 
 export function makeGit(cwd) {
-  return (...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  // GIT_OPTIONAL_LOCKS=0: `git status` must not take index.lock while other sessions work.
+  return (...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } }).trim();
 }
 
 /** Hint only: the branch has commits beyond base and merging it into base would change nothing. */
@@ -45,7 +47,9 @@ export function loadMergedHeads(cwd) {
   try {
     const out = execFileSync('gh', ['api', '--paginate', 'repos/{owner}/{repo}/pulls?state=closed&base=main&per_page=100',
       '--jq', '.[] | select(.merged_at != null) | "\\(.head.ref) \\(.head.sha)"'], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-    return new Map(out.split('\n').filter(Boolean).map((l) => l.split(' ')));
+    const heads = new Map(); // a branch name reused across PRs keeps every merged head
+    for (const [ref, sha] of out.split('\n').filter(Boolean).map((l) => l.split(' '))) heads.set(ref, [...(heads.get(ref) ?? []), sha]);
+    return heads;
   } catch {
     return null;
   }
@@ -68,7 +72,7 @@ function worktreeKeepReason(wt, current) {
 export function plan(git, { root, base = 'origin/main', now = Date.now(), mergedHeads = new Map() } = {}) {
   try { git('rev-parse', '--verify', '--quiet', `${base}^{commit}`); } catch { throw new Error(`${base} not found: run \`git fetch origin\` first`); }
   const heads = mergedHeads ?? new Map();
-  const prMerged = (ref, name) => heads.get(name) === git('rev-parse', ref);
+  const prMerged = (ref, name) => [heads.get(name) ?? []].flat().includes(git('rev-parse', ref));
   const current = resolve(git('rev-parse', '--show-toplevel'));
   const worktrees = parseWorktrees(git('worktree', 'list', '--porcelain'));
   const branches = git('for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter((b) => b && b !== 'main');
@@ -83,7 +87,7 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
   }
   for (const b of branches) {
     if (keepBranch.has(b)) actions.push({ kind: 'branch', target: b, action: 'KEEP', reason: 'worktree kept' });
-    else if (merged.get(b)) actions.push({ kind: 'branch', target: b, action: 'DONE', reason: 'PR merged into main at this tip', sha: git('rev-parse', b) });
+    else if (merged.get(b)) actions.push({ kind: 'branch', target: b, action: 'DONE', reason: 'PR merged into main at this tip' });
     else if (looksMerged(git, b, base)) actions.push({ kind: 'branch', target: b, action: 'REVIEW', reason: 'changes appear in main but no merged PR matches; delete by hand if done' });
     else actions.push({ kind: 'branch', target: b, action: 'KEEP', reason: 'open' });
   }
@@ -115,21 +119,9 @@ export function plan(git, { root, base = 'origin/main', now = Date.now(), merged
   return { actions, remote, prData: mergedHeads !== null };
 }
 
-/** Commands a human can run to remove the DONE entries; printed, never executed. */
-export function removalCommands(actions) {
-  // Single quotes stop $ and ` expansion in bash and PowerShell; they escape ' differently, so a path
-  // containing ' is printed as a comment to quote by hand.
-  const q = (s) => (/[^\w./:@-]/.test(s) ? `'${s}'` : s);
-  // update-ref with the expected SHA refuses to delete a branch that moved after this report.
-  return actions.filter((a) => a.action === 'DONE').map((a) => {
-    const cmd = a.kind === 'worktree' ? `git worktree remove ${q(a.target)}` : a.kind === 'branch' ? `git update-ref -d ${q(`refs/heads/${a.target}`)} ${a.sha}` : `rm -r ${q(a.target)}`;
-    return a.target.includes("'") ? `# quote by hand: ${cmd}` : cmd;
-  });
-}
-
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = new Set(process.argv.slice(2));
-  if (args.has('--apply')) { console.error('cleanup: report only; there is no --apply. Run the printed commands after checking them.'); process.exit(2); }
+  if (args.has('--apply')) { console.error('cleanup: report only; there is no --apply. Remove DONE entries with the checks in ship-pr step 8.'); process.exit(2); }
   try {
     const git = makeGit(process.cwd());
     const root = dirname(resolve(git('rev-parse', '--path-format=absolute', '--git-common-dir')));
@@ -137,10 +129,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const { actions, remote, prData } = plan(git, { root, mergedHeads: loadMergedHeads(process.cwd()) });
     for (const a of actions) console.log(`${a.action.padEnd(6)} ${a.kind.padEnd(8)} ${a.target}  (${a.reason})`);
     if (!prData) console.log('\n`gh` unavailable or not signed in: no merged-PR evidence, so nothing is DONE.');
-    const cmds = removalCommands(actions);
-    if (cmds.length) console.log(`\nTo remove the DONE entries (check them first; this script deletes nothing):\n${cmds.map((c) => `  ${c}`).join('\n')}`);
-    if (remote.length) console.log(`\nRemote branches whose merged PR head is their tip (delete only with the owner's approval):\n  git push origin --delete ${remote.join(' ')}`);
-    if (!cmds.length && !remote.length) console.log('\nNothing to clean up.');
+    const done = actions.filter((a) => a.action === 'DONE').length;
+    if (done) console.log(`\n${done} DONE entr${done === 1 ? 'y' : 'ies'}: remove each with the checks in ship-pr step 8; this script deletes nothing.`);
+    if (remote.length) console.log(`\nRemote branches whose merged PR head matched their tip at the last fetch (delete only with the owner's approval):\n${remote.map((r) => `  ${r}`).join('\n')}`);
+    if (!done && !remote.length) console.log('\nNothing to clean up.');
   } catch (err) {
     console.error(`cleanup: ${String(err.stderr || err.message).trim().split('\n')[0]}`); process.exit(1);
   }

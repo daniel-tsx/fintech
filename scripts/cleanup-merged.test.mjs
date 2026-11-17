@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { looksMerged, makeGit, parseWorktrees, plan, removalCommands } from './cleanup-merged.mjs';
+import { looksMerged, makeGit, parseWorktrees, plan } from './cleanup-merged.mjs';
 
 Object.assign(process.env, {
   GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.invalid', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.invalid',
@@ -73,13 +73,7 @@ test('with merged-PR evidence: only clean merged work is DONE; dirty, open, stac
   assert.match(find(actions, 'tmp', '.tmp/orphan').reason, /untouched \d+ days/);
   assert.deepEqual(remote, ['feat/squashed']);
 
-  const cmds = removalCommands(actions);
-  assert.equal(cmds.length, 3);
-  assert.match(cmds[0], /^git worktree remove .*\.tmp\/squashed\/worktree$/);
-  assert.equal(cmds[1], `git update-ref -d refs/heads/feat/squashed ${prs.get('feat/squashed')}`);
-  assert.equal(removalCommands([{ kind: 'tmp', action: 'DONE', target: '/a b/$x' }])[0], "rm -r '/a b/$x'");
-  assert.match(removalCommands([{ kind: 'tmp', action: 'DONE', target: "/a/it's" }])[0], /^# quote by hand: /);
-  assert.match(cmds[2], /^rm -r .*\.tmp\/squashed$/);
+  assert.equal(plan(git, { root: repo, mergedHeads: new Map([['feat/squashed', ['0'.repeat(40), prs.get('feat/squashed')]]]) }).actions.find((a) => a.target === 'feat/squashed').action, 'DONE', 'any merged head of a reused branch name counts');
   // Report only: planning changed nothing on disk or in refs.
   assert.equal(existsSync(join(repo, '.tmp/squashed/worktree')), true);
   assert.deepEqual(branchesOf(git), ['feat/child', 'feat/open', 'feat/squashed', 'fix/dirty', 'main']);
