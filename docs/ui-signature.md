@@ -12,7 +12,7 @@ Every page uses the same order: `PageHeading` (mono eyebrow, 20px title, one-lin
 
 ## Type
 
-- IBM Plex Sans for interface text and IBM Plex Mono for amounts, identifiers, timestamps and eyebrow labels, loaded with `next/font/google` (self-hosted at build time; no runtime request to Google).
+- IBM Plex Sans for interface text and IBM Plex Mono for amounts, identifiers, timestamps and eyebrow labels, self-hosted from `apps/web/app/fonts` (latin subset, OFL-1.1) with `next/font/local`, so neither builds nor pages request Google Fonts.
 - Scale: 11 / 12 / 13 / 15 / 20 / 28px (`--text-xs` … `--text-2xl`). Body and table text is 13px. Nothing renders below 11px.
 - Numerals use `font-variant-numeric: tabular-nums`; money columns align right.
 
