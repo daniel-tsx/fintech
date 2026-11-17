@@ -90,7 +90,7 @@ Load a skill only when its row applies; it then owns the procedure. Claude Code 
 - A task's `.tmp` files are its resume source: delete them only when it is finalized (merged, rejected, or explicitly abandoned), as `ship-pr` step 8 does. Never read or reuse another task's `.tmp` unless asked. At the end of a session, list what remains and why.
 - Size limits: plan ≤200 lines, review report findings only and ≤150 lines, decision entry ≤1 page. Needing more means the task should be split.
 - New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. A durable human decision gets one entry of at most a page in `docs/decisions/`.
-- `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Never read whole folders for context.
+- `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Ripgrep-based search skips `docs/audits/` (`.rgignore`); search it by path when needed. Never read whole folders for context.
 
 ## Git and PRs
 
