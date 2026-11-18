@@ -48,10 +48,24 @@ for (const name of ['independent-review', 'ship-pr']) {
   assert.match(a, new RegExp(`^---\nname: ${name}\ndescription: .+\n---`), `Bad frontmatter: ${name}`);
 }
 // The independent reviewer is pinned: fresh Opus 5.5 context at high effort, without write tools.
+// Keys are parsed once each: a duplicate key would silently override the pin (the last one wins).
 const reviewer = (await readFile(join(root, '.claude/agents/independent-reviewer.md'), 'utf8')).replaceAll('\r\n', '\n');
-const front = reviewer.match(/^---\n([\s\S]*?)\n---\n/)?.[1] ?? '';
-for (const line of ['name: independent-reviewer', 'model: claude-opus-5-5', 'effort: high', 'disallowedTools: Write, Edit, NotebookEdit']) {
-  assert(front.split('\n').includes(line), `independent-reviewer agent must declare "${line}"`);
+const front = reviewer.match(/^---\n([\s\S]*?)\n---\n/)?.[1];
+assert(front, 'independent-reviewer agent needs YAML frontmatter');
+const keys = new Map();
+for (const line of front.split('\n').filter((l) => /^\S/.test(l))) {
+  const [, key, value] = line.match(/^([\w-]+):\s*(.*?)\s*$/) ?? [];
+  assert(key, `Unparsed frontmatter line in independent-reviewer: ${line}`);
+  assert(!keys.has(key), `Duplicate frontmatter key in independent-reviewer: ${key}`);
+  keys.set(key, value.replace(/^(['"])(.*)\1$/, '$2'));
 }
-assert(!/^tools:.*\b(Write|Edit|NotebookEdit)\b/m.test(front), 'independent-reviewer agent must not list write tools');
+const list = (key) => (keys.get(key) ?? '').split(',').map((t) => t.trim()).filter(Boolean);
+assert.equal(keys.get('name'), 'independent-reviewer');
+assert.equal(keys.get('model'), 'claude-opus-5-5', 'independent-reviewer must run claude-opus-5-5');
+assert.equal(keys.get('effort'), 'high', 'independent-reviewer must run at high effort');
+for (const tool of ['Write', 'Edit', 'NotebookEdit']) {
+  assert(list('disallowedTools').includes(tool), `independent-reviewer must disallow ${tool}`);
+  assert(!list('tools').includes(tool), `independent-reviewer must not list ${tool}`);
+}
+assert(!keys.has('permissionMode'), 'independent-reviewer must inherit the permission mode, not set its own');
 console.log('engineering-workflow v1.1: 6 files mirrored; checkpoint/resume guards verified; independent-review and ship-pr mirrored; independent-reviewer pinned to claude-opus-5-5/high');
