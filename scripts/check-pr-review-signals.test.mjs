@@ -19,9 +19,10 @@ test('shared high-risk infrastructure and runtime wiring are T2; other shared co
     'apps/api/src/common/idempotency.service.ts', 'apps/api/src/common/hash.ts', 'apps/api/src/app.module.ts',
     'apps/api/src/worker-app.module.ts', 'apps/api/src/common/correlation.middleware.ts', 'apps/api/src/common/domain-error.ts',
     '.github/workflows/ci.yml', 'scripts/check-migration-history.mjs', 'scripts/sync-agent-skills.mjs',
+    'scripts/check-engineering-workflow.mjs', '.claude/agents/independent-reviewer.md', '.claude/skills/ship-pr/SKILL.md',
   ];
   assert.deepEqual(t2Files(files), files.slice(0, 4));
-  assert.deepEqual(guardFiles(files), ['.github/workflows/ci.yml', 'scripts/check-migration-history.mjs']);
+  assert.deepEqual(guardFiles(files), ['.github/workflows/ci.yml', 'scripts/check-migration-history.mjs', 'scripts/check-engineering-workflow.mjs', '.claude/agents/independent-reviewer.md']);
 });
 
 test('ordinary new tests pass', () => {

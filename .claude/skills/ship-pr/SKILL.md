@@ -9,7 +9,7 @@ Never push, open or merge a PR without the user's explicit go-ahead in this sess
 
 ## Task reports
 T1/T2 tasks keep four short reports in `.tmp/<task-slug>/`. They become the PR description, which is the durable record; they are never committed. T0 needs none: the PR states what and why, and the checks.
-- `epic.md`, written when the task starts: problem, goal, scope and non-goals, task size, invariants or boundaries touched, and numbered acceptance criteria (AC1, AC2…). It is also the `codex-review` brief.
+- `epic.md`, written when the task starts: problem, goal, scope and non-goals, task size, invariants or boundaries touched, and numbered acceptance criteria (AC1, AC2…). It is also the `independent-review` brief.
 - `todo.md`, kept current while working (three to five lines is fine): the steps and ACs as a checklist, open blocking items, and follow-ups left for later PRs.
 - `output.md`, at the end: what was delivered, by area and with its files; behavior, API, schema or config changes; docs updated; what was deliberately not done.
 - `evidence.md`, at final verification: for each AC, the proof on the final SHA (command and result, test names, screenshots) or NOT VERIFIED with the reason; every check as PASS, FAIL or NOT RUN; reviews with findings and their disposition; unverified boundaries.
@@ -31,14 +31,14 @@ Run the checks AGENTS.md *Verification commands* requires for what changed: the 
 
 ## 4. Review prerequisites
 - T1: `ponytail-review` of your own diff.
-- T2, CI or guard changes: `codex-review` on the current HEAD. If commits landed after that review, review again.
+- T2, CI or guard changes: `independent-review` on the current HEAD. If commits landed after that review, review again.
 - Auth, tenancy, billing/payments or secrets: also run `/security-review` in Claude Code.
 
 ## 5. Final verification
 After the last change, on the commit you will push:
 1. The tree is clean and rebased on `origin/main`. Record `git rev-parse HEAD` as the final SHA.
 2. The guards (step 2) and checks (step 3) ran on the final SHA. Rerun any that ran on an earlier commit.
-3. Every AC in `epic.md` has evidence on the final SHA. For T2, `epic.md` is still the reviewed and approved version: its SHA-256 matches the hash `codex-review` recorded; if it changed since, review it and get approval again.
+3. Every AC in `epic.md` has evidence on the final SHA. For T2, `epic.md` is still the reviewed and approved version: its SHA-256 matches the hash `independent-review` recorded; if it changed since, review it and get approval again.
 4. Every file in `git diff --name-only origin/main...HEAD` is accounted for in `output.md`. Remove or explain anything else: debug code, stray files, unrelated edits.
 5. `todo.md` has no open blocking item.
 6. The required reviews (step 4) ran on the final SHA.

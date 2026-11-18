@@ -14,7 +14,7 @@ A portfolio/reference payment platform. Financial correctness beats convenience.
 | --- | --- | --- | --- | --- |
 | **T0 trivial** | Copy, typo, label/style, comment or doc wording; no behavior change | This file and the touched files | Cheapest relevant check | Re-read the diff |
 | **T1 standard** | Bug fix, UI change, small feature or refactor outside T2 areas | T0 + `package.json`, the matrix row's code entry points, the one document owning the behavior | [Verification commands](#verification-commands) for the touched package | `ponytail-review` of your own diff |
-| **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, runtime module wiring, provider integration, data deletion, security | T1 + `README.md`, every document in the matrix row, and any [approved decision record](docs/AGENT_START_HERE.md#approved-decision-records) whose invariants the change could affect | T1 + Docker integration when database, queue or transaction behavior changes | Independent reviewer (`codex-review`) |
+| **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, runtime module wiring, provider integration, data deletion, security | T1 + `README.md`, every document in the matrix row, and any [approved decision record](docs/AGENT_START_HERE.md#approved-decision-records) whose invariants the change could affect | T1 + Docker integration when database, queue or transaction behavior changes | `independent-review` |
 
 Skill text saying "non-trivial" means T1 or T2. A bug with an unknown cause takes the size of its area. Verification follows the boundary actually touched: a T2-area change that alters no database, queue or transaction behavior still gets T2 reading and review, but not Docker.
 
@@ -72,14 +72,14 @@ Load a skill only when its row applies; it then owns the procedure. Claude Code 
 | `systematic-debugging` | A bug, failure or behavior whose cause is unknown |
 | `grilling` | A T2 task, or a T1 product decision, still has unresolved design choices |
 | `supabase-postgres-best-practices` | SQL, indexes, schema, transactions, locking or connections (PostgreSQL-general; never assume Supabase) |
-| `codex-review` | Independent review: T2 diffs, T2 designs, CI or guard changes |
+| `independent-review` | Fresh Opus 5.5 review: T2 diffs, T2 designs, CI or guard changes |
 | `ship-pr` | A finished task branch: task reports, final verification, PR description, push after authorization, post-merge cleanup |
 | `frontend-design` | Building new UI or reshaping it; stay within `docs/ui-signature.md` |
 | `vercel-react-best-practices` | T1/T2 React/Next.js behavior, data fetching, rendering or performance; read only the needed `rules/` |
 | `ponytail-audit` | An explicitly requested repository-wide audit |
 | `engineering-workflow` | Only when the user asks for it |
 
-- **T2 plans.** For T2 changes to schema, money semantics, locking or idempotency: write `.tmp/<slug>/plan.md` (≤200 lines: invariants, transaction boundaries, test matrix), run `codex-review` on it as a design, and get the user's approval before implementing. For a T2 task that spans several checkpoints, combines a migration with runtime changes or is likely to be interrupted, recommend `engineering-workflow` in one line and ask first.
+- **T2 plans.** For T2 changes to schema, money semantics, locking or idempotency: write `.tmp/<slug>/plan.md` (≤200 lines: invariants, transaction boundaries, test matrix), run `independent-review` on it as a design, and get the user's approval before implementing. For a T2 task that spans several checkpoints, combines a migration with runtime changes or is likely to be interrupted, recommend `engineering-workflow` in one line and ask first.
 - **Reviews.** Give the independent reviewer the task brief, acceptance criteria and the diff or design, not your conclusions. Changes touching auth, tenancy, billing/payments or secrets also get Claude Code's `/security-review`. Report findings before fixing them.
 - **Browser checks.** When the host has a browser tool, check user-facing changes against `pnpm dev:web` on localhost; otherwise report browser verification NOT RUN.
 

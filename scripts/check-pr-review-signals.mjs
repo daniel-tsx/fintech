@@ -20,7 +20,8 @@ export const T2_PATHS = [
 // separate `guard-change` label (independent review) rather than T2, which would demand financial reading.
 export const GUARD_PATHS = [
   /^\.github\/workflows\//,
-  /^scripts\/check-(migration-history|pr-review-signals)\.mjs$/,
+  /^scripts\/check-(migration-history|pr-review-signals|engineering-workflow)\.mjs$/,
+  /^\.claude\/agents\//,
 ];
 // Owning documents per code area, from the docs/AGENT_START_HERE.md reading matrix. Code changed without
 // any of its documents is a prompt to check them, not an error: many changes need no doc update.
