@@ -38,7 +38,7 @@ for (const marker of ['sourceFingerprint', 'BLOCKED_EVIDENCE_CHANGED', 'correcti
   assert(ledgerScript.includes(marker), `Missing checkpoint/resume guard: ${marker}`);
 }
 // Other locally authored skills: one SKILL.md each, identical on both hosts.
-for (const name of ['codex-review', 'ship-pr']) {
+for (const name of ['independent-review', 'ship-pr']) {
   const [a, b] = await Promise.all(['.agents', '.claude'].map(async (host) => {
     const dir = join(root, host, 'skills', name);
     assert.deepEqual(await readdir(dir), ['SKILL.md'], `Unexpected files: ${host}/skills/${name}`);
@@ -47,4 +47,11 @@ for (const name of ['codex-review', 'ship-pr']) {
   assert.equal(a, b, `Codex and Claude copies differ: ${name}`);
   assert.match(a, new RegExp(`^---\nname: ${name}\ndescription: .+\n---`), `Bad frontmatter: ${name}`);
 }
-console.log('engineering-workflow v1.1: 6 files mirrored; checkpoint/resume guards verified; codex-review and ship-pr mirrored');
+// The independent reviewer is pinned: fresh Opus 5.5 context at high effort, without write tools.
+const reviewer = (await readFile(join(root, '.claude/agents/independent-reviewer.md'), 'utf8')).replaceAll('\r\n', '\n');
+const front = reviewer.match(/^---\n([\s\S]*?)\n---\n/)?.[1] ?? '';
+for (const line of ['name: independent-reviewer', 'model: claude-opus-5-5', 'effort: high', 'disallowedTools: Write, Edit, NotebookEdit']) {
+  assert(front.split('\n').includes(line), `independent-reviewer agent must declare "${line}"`);
+}
+assert(!/^tools:.*\b(Write|Edit|NotebookEdit)\b/m.test(front), 'independent-reviewer agent must not list write tools');
+console.log('engineering-workflow v1.1: 6 files mirrored; checkpoint/resume guards verified; independent-review and ship-pr mirrored; independent-reviewer pinned to claude-opus-5-5/high');

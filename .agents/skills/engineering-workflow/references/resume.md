@@ -25,11 +25,11 @@ node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot READY
 # Now PLAN, then PLAN_REVIEW
 node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot READY --artifact .tmp/agent-workflows/r2-b2-design-pilot/plan.md
 # Fresh external subagent review: never substitute an orchestrator self-review
-node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot PLAN_REQUEST_CHANGES --artifact .tmp/agent-workflows/r2-b2-design-pilot/plan-review-1.md --reviewer-id codex-reviewer-1
+node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot PLAN_REQUEST_CHANGES --artifact .tmp/agent-workflows/r2-b2-design-pilot/plan-review-1.md --reviewer-id independent-reviewer-1
 # CORRECT_DESIGN (uses one of two total correction rounds)
 node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot READY --artifact .tmp/agent-workflows/r2-b2-design-pilot/plan.md
 # PLAN_REVIEW again, with a genuinely fresh context and a NEW report filename
-node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot PLAN_APPROVED --artifact .tmp/agent-workflows/r2-b2-design-pilot/plan-review-2.md --reviewer-id codex-reviewer-2
+node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot PLAN_APPROVED --artifact .tmp/agent-workflows/r2-b2-design-pilot/plan-review-2.md --reviewer-id independent-reviewer-2
 # DESIGN_ONLY -> FINAL_GATE -> HUMAN_APPROVAL
 node scripts/engineering-workflow-state.mjs advance r2-b2-design-pilot PASSED --artifact .tmp/agent-workflows/r2-b2-design-pilot/final-checks.json
 ```
