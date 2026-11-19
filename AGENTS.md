@@ -76,7 +76,7 @@ Load a skill only when its row applies; it then owns the procedure. Prefer the r
 | `supabase-postgres-best-practices` | SQL, indexes, schema, transactions, locking or connections (PostgreSQL-general; never assume Supabase) |
 | `independent-review` | Fresh Opus 5.5 review: T2 diffs, T2 designs, CI or guard changes |
 | `ship-pr` | A finished task branch: task reports, final verification, PR description, push after authorization, post-merge cleanup |
-| `frontend-design` | Building new UI or reshaping it; stay within `docs/ui-signature.md` |
+| `ui-taste` | Building, polishing, auditing or reviewing UI; `docs/ui-signature.md` is the visual authority |
 | `vercel-react-best-practices` | T1/T2 React/Next.js behavior, data fetching, rendering or performance; read only the needed `rules/` |
 | `ponytail-audit` | An explicitly requested repository-wide audit |
 | `improve-codebase-architecture` | Only when the user asks for an architecture review |
