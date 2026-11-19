@@ -44,15 +44,62 @@
     {
       "name": "grilling",
       "repository": "https://github.com/mattpocock/skills",
-      "revision": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+      "revision": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
       "path": "skills/productivity/grilling",
-      "tree": "28aceb4c9567b985cb47f7db88cf23c9f33af8b8",
-      "installedFrom": "~/.agents/skills/grilling",
+      "tree": "f551b6e0d219fdda0b6abf277f8f915b3127d1e9",
+      "installedFrom": "official upstream (pinned revision)",
       "license": "MIT",
       "files": {
         "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
-        "SKILL.md": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15",
+        "SKILL.md": "a146842ed93ca43d833550fa9adf02e58cb63c83fea9d4b4522995b82242d4e2",
         "agents/openai.yaml": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b"
+      }
+    },
+    {
+      "name": "improve-codebase-architecture",
+      "repository": "https://github.com/mattpocock/skills",
+      "revision": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "path": "skills/engineering/improve-codebase-architecture",
+      "tree": "587147dd230da299cc5e84971cb0a33f6676f8a6",
+      "installedFrom": "official upstream (pinned revision)",
+      "license": "MIT",
+      "files": {
+        "HTML-REPORT.md": "581e8bb5a521e46bbda8ca7e19b15948bed882187108092ebb90c62513b77528",
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "35b03a3db61e0f5aa333ea59b54963e45a3d2ace6649b2ef4f9576603e2582a6",
+        "agents/openai.yaml": "c8cb20f68ebf0edb4e497bc11ae5fcaa196004e661cd189015b04f4109ced7f1"
+      }
+    },
+    {
+      "name": "domain-modeling",
+      "repository": "https://github.com/mattpocock/skills",
+      "revision": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "path": "skills/engineering/domain-modeling",
+      "tree": "ea30ee454ba264543dbe40737973b1a5afb9f0e6",
+      "installedFrom": "official upstream (pinned revision)",
+      "license": "MIT",
+      "files": {
+        "ADR-FORMAT.md": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+        "GLOSSARY-FORMAT.md": "21dcc40cdec8e151a829b98ab1517c1867bc444e3665134a98c6983411996801",
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "7b925d7b1e341a2eeae33ad68a8a8c0ab889a38ddd22a7598e4c240e5a7556a3",
+        "agents/openai.yaml": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b"
+      }
+    },
+    {
+      "name": "codebase-design",
+      "repository": "https://github.com/mattpocock/skills",
+      "revision": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "path": "skills/engineering/codebase-design",
+      "tree": "4cbe1c131e1ea54109cb1e4e5f3c505810db6606",
+      "installedFrom": "official upstream (pinned revision)",
+      "license": "MIT",
+      "files": {
+        "DEEPENING.md": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+        "DESIGN-IT-TWICE.md": "c222ab5a82e0405672eb9062d62496139a08828e45d07fc5f18e4952c10fac1a",
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
+        "agents/openai.yaml": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f"
       }
     },
     {

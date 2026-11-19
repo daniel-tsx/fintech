@@ -41,7 +41,8 @@ The approach is an original adaptation inspired by [Superpowers subagent-driven 
 | --- | --- | --- |
 | `ponytail` | [DietrichGebert/ponytail@09c434ab](https://github.com/DietrichGebert/ponytail/tree/09c434ab73ca43761c5d8b0c5d341926c2fba710/skills/ponytail) | Existing `~/.agents/skills/ponytail`; matched upstream |
 | `ponytail-review`, `ponytail-audit` | [DietrichGebert/ponytail@09c434ab](https://github.com/DietrichGebert/ponytail/tree/09c434ab73ca43761c5d8b0c5d341926c2fba710/skills) | Official upstream |
-| `grilling` | [mattpocock/skills@5beb35b0](https://github.com/mattpocock/skills/tree/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/productivity/grilling) | Existing `~/.agents/skills/grilling`; matched upstream |
+| `grilling` | [mattpocock/skills@abeeaf95](https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/grilling) | Official upstream (updated from `5beb35b0`) |
+| `codebase-design`, `domain-modeling`, `improve-codebase-architecture` | [mattpocock/skills@abeeaf95](https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/engineering) | Official upstream |
 | `systematic-debugging` | [obra/superpowers@bb92a777](https://github.com/obra/superpowers/tree/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/systematic-debugging) | Existing local tree; all 11 files matched upstream |
 | `supabase-postgres-best-practices` | [supabase/agent-skills@c9be0e93](https://github.com/supabase/agent-skills/tree/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices) | Existing local tree; all 36 files matched upstream |
 | `vercel-react-best-practices` | [vercel-labs/agent-skills@063bee94](https://github.com/vercel-labs/agent-skills/tree/063bee94c3f4df8453406c830b0a7df0f2860278/skills/react-best-practices) | Official upstream; compiled `AGENTS.md` omitted and a `LICENSE` note added (see manifest adaptations) |
@@ -66,7 +67,7 @@ To reuse this setup in another repository, copy both skill trees, the manifest a
 
 The setup machine has global `ponytail`, `grilling`, `systematic-debugging` and `supabase-postgres-best-practices` under `~/.agents/skills/`, with existing Claude junctions. Plugin caches also contain Systematic Debugging in Superpowers and Postgres Best Practices in Supabase. Global configuration remains unchanged. [Codex can list duplicate names](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills), and [Claude's name resolution depends on scope](https://code.claude.com/docs/en/skills#where-skills-live); do not assume repository precedence or load a plugin equivalent alongside its local copy. Shared routing tells agents to read the local file explicitly if needed.
 
-In a fresh session launched from this repository, inspect Codex's skill selector (or app-server `skills/list` with this checkout in `cwds` and `forceReload: true`), and Claude Code's `/` command menu. Confirm all eight vendored skills and the three local ones, and inspect the resolved local paths. Use Claude's `/memory` to confirm that `AGENTS.md` is imported. Hosts may cache skills until the next turn or a fresh session. Discovery alone does not prove conditional activation; check these cases without changing application files:
+In a fresh session launched from this repository, inspect Codex's skill selector (or app-server `skills/list` with this checkout in `cwds` and `forceReload: true`), and Claude Code's `/` command menu. Confirm all eleven vendored skills and the three local ones, and inspect the resolved local paths. Use Claude's `/memory` to confirm that `AGENTS.md` is imported. Hosts may cache skills until the next turn or a fresh session. Discovery alone does not prove conditional activation; check these cases without changing application files:
 
 | Request | Expected routing |
 | --- | --- |
@@ -74,6 +75,8 @@ In a fresh session launched from this repository, inspect Codex's skill selector
 | "Implement this agreed non-trivial change with these acceptance criteria." | `ponytail`, relevant domain skills/checks, then `ponytail-review`; no redundant interview |
 | "Review this change and its affected callers." | `ponytail-review` plus applicable domain review; report findings before fixes |
 | "Audit the repository's correctness and complexity." | `ponytail-audit`; report only |
+| "Design the interface for the new settlement module before we build it." | `codebase-design` (vocabulary, deletion test, seams), then `domain-modeling` for new terms; `ponytail` does not veto the new seam. Old tests replaced by tests at the new interface are removed only once the new tests cover the same behavior (financial invariants included), and are listed in the PR's review guide; Review signals reports removed tests |
+| "Review the architecture for deepening opportunities." | `improve-codebase-architecture` (only on request): HTML report in the OS temp directory, then `grilling` on the chosen candidate |
 | "Fix this spelling error in the README." | Direct edit and proportionate verification; no interview or audit |
 | "Investigate a recurring test failure whose cause is unknown." | `systematic-debugging` as the investigation skill; reproduce, test hypotheses and verify a regression |
 | "Correct this typo; the exact cause is already established." | Direct fix; no debugging investigation or Postgres skill |

@@ -30,7 +30,7 @@ Most of `docs/audits/` is historical and opt-in. These records are approved poli
 - [Approved capture accounting contract](audits/h1-fix-02-settlement-design.md#16-approved-b1-contract-2026-10-09) — allocation, lots and accounting semantics approved for F01 (§16 only).
 - [B3.2 human architecture decisions](audits/h1-fix-02-b3-2-human-decisions.md) — H01–H12 rollout, admission, writer, payout and evidence-gate choices, plus D01.
 
-New approved decisions go to `docs/decisions/` and are added to this list.
+New decisions go to `docs/adr/` (see `domain-modeling`) and are added to this list.
 
 ## Evidence to preserve
 
