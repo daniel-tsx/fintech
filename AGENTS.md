@@ -63,7 +63,7 @@ Report each check as PASS, FAIL or NOT RUN with command, scope, counts and reaso
 
 ## Skills
 
-Load a skill only when its row applies; it then owns the procedure. Prefer the repository copies (`.claude/skills/`, `.agents/skills/`) over same-name global skills. This repository's rules and financial invariants win over any skill's heuristics or "always" language. [AI workflow](docs/AI_WORKFLOW.md) owns the work loop, payment review questions and skill provenance.
+Load a skill only when its row applies; it then owns the procedure. Prefer repository copies over same-name global skills. This repository's rules and financial invariants win over any skill's heuristics or "always" language. [AI workflow](docs/AI_WORKFLOW.md) owns the work loop, payment review questions and skill provenance.
 
 | Skill | Use when |
 | --- | --- |
@@ -77,6 +77,7 @@ Load a skill only when its row applies; it then owns the procedure. Prefer the r
 | `independent-review` | Fresh Opus 5.5 review: T2 diffs, T2 designs, CI or guard changes |
 | `ship-pr` | A finished task branch: task reports, final verification, PR description, push after authorization, post-merge cleanup |
 | `ui-taste` | Building, polishing, auditing or reviewing UI; `docs/ui-signature.md` is the visual authority |
+| `frontend-design` | Only when the user asks for a new UI or a full redesign; it then leads, not `ui-taste` |
 | `vercel-react-best-practices` | T1/T2 React/Next.js behavior, data fetching, rendering or performance; read only the needed `rules/` |
 | `ponytail-audit` | An explicitly requested repository-wide audit |
 | `improve-codebase-architecture` | Only when the user asks for an architecture review |
@@ -84,14 +85,14 @@ Load a skill only when its row applies; it then owns the procedure. Prefer the r
 
 - **T2 plans.** For T2 changes to schema, money semantics, locking or idempotency: write `.tmp/<slug>/plan.md` (≤200 lines: invariants, transaction boundaries, test matrix), run `independent-review` on it as a design, and get the user's approval before implementing. For a T2 task that spans several checkpoints, combines a migration with runtime changes or is likely to be interrupted, recommend `engineering-workflow` in one line and ask first.
 - **Reviews.** Changes touching auth, tenancy, billing/payments or secrets also get Claude Code's `/security-review`. Report findings before fixing them.
-- **Browser checks.** When the host has a browser tool, check user-facing changes against `pnpm dev:web` on localhost; otherwise report browser verification NOT RUN.
+- **Browser checks.** With a browser tool, check user-facing changes on `pnpm dev:web`; otherwise report them NOT RUN.
 
 ## Files and artifacts
 
 - Default to no new files. Plans, reviews and evidence go in the chat, commit messages or the PR description.
 - Temporary files live only in the ignored `.tmp/<task-slug>/` of their task (`engineering-workflow`: `.tmp/agent-workflows/<task-slug>/`), never in `.tmp/` itself or tracked paths. The allowed files are the task reports and drafts listed in `ship-pr`, and `engineering-workflow`'s own set in its step 3. No full test-runner output, duplicate logs, source snapshots or diff copies.
 - A task's `.tmp` files are its resume source: delete them only when it is finalized (merged, rejected, or explicitly abandoned), as `ship-pr` step 8 does. Never read or reuse another task's `.tmp` unless asked. At the end of a session, list what remains and why.
-- Size limits: plan ≤200 lines, review report findings only and ≤150 lines, decision entry ≤1 page. Needing more means the task should be split.
+- Size limits: plan ≤200 lines, review report findings only and ≤150 lines, decision entry ≤1 page; needing more means splitting the task.
 - New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. Domain terms go in `GLOSSARY.md` and decisions in `docs/adr/`, as `domain-modeling` describes.
 - `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Ripgrep-based search skips `docs/audits/` (`.rgignore`); search it by path when needed. Never read whole folders for context.
 
@@ -99,7 +100,7 @@ Load a skill only when its row applies; it then owns the procedure. Prefer the r
 
 - One branch and worktree per task, from freshly fetched `origin/main` and without upstream tracking: `git fetch origin`, then `git worktree add --no-track -b <type>/<slug> .tmp/<slug>/worktree origin/main` (or a host-created `.claude/worktrees/` worktree). Types `feat/`, `fix/`, `chore/`, `docs/`; the slug does not repeat the type. If the branch exists, choose a new slug unless resuming that task. Never commit to `main`.
 - Commit locally with Conventional Commits when a checkpoint passes its checks, unless the user said not to; `engineering-workflow` keeps its own no-commit rule.
-- Every PR targets `main`. Do not stack PRs on other task branches: a PR merged into another branch never reaches `main`.
+- Every PR targets `main`; never stack PRs on other task branches.
 - Ship with `ship-pr`. Push, PR creation and merge need explicit authorization in the session; merging is always the human's (squash, after required checks pass). The PR description is the durable record.
 - Never weaken or skip a test to make a check pass. CI labels T2 paths `t2-area` and fails on focused tests and unapproved skips. Hosted CI counts only for the exact head SHA.
 - Migrations are append-only (CI enforces it). Number a new one only after rebasing on the latest `main`, give its journal entry a `when` greater than every existing one (drizzle silently skips older ones), and rebase again if another PR adds a migration first.
@@ -107,7 +108,7 @@ Load a skill only when its row applies; it then owns the procedure. Prefer the r
 ## Finish
 
 - If architecture, API contracts, schemas, business behavior or operational procedures changed, update the owning document and its links in the same PR; skip doc churn for implementation details.
-- Report changed files, checks (PASS, FAIL or NOT RUN), unverified boundaries, assumptions, next steps, and every file created, kept or deleted, including temporary ones.
+- Report changed files, checks, unverified boundaries, assumptions, next steps, and every file created, kept or deleted, including temporary ones.
 
 ## Maintaining this file
 
