@@ -46,7 +46,7 @@ Report each check as PASS, FAIL or NOT RUN with command, scope, counts and reaso
 - Preserve API idempotency scope, payload comparison and replayed status/body. Local intent, outbox, audit and replay response commit atomically.
 - Preserve provider keys across retries and redelivery. Never generate a new key to work around an unknown outcome.
 - Delivery is at-least-once. Queue IDs, Redis locks and broker ACKs are not financial uniqueness guarantees.
-- Ledger postings stay balanced, currency-isolated, immutable and unique by business reference. Corrections use compensating journals.
+- Journals stay balanced, currency-isolated, immutable and unique by business reference. Corrections use compensating journals.
 - Captured ≠ settled ≠ paid out. Settlement and payout are internal lab accounting, not bank transfers.
 - Do not change ledger semantics, fee/refund rounding, lock order or balance reservation casually: name the affected invariant and verify it explicitly.
 - `apps/api/drizzle/0000_cheerful_sunset_bain.sql` holds hand-written constraints and triggers. Never replace it with generated SQL, use schema push or regenerate migration history.
