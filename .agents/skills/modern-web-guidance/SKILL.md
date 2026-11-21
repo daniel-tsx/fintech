@@ -71,7 +71,7 @@ DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 legacy-scan <path> --json
 
 ## Using npx / pnpx
 
-- **Runner & Permissions**: Prefer `pnpx` over `npx` if `pnpm` is available (`pnpx` does not use `-y`); on Windows, use `npx.cmd`. When requesting tool permissions, allowlist `npx -y modern-web-guidance@1.0.1 *` (or `pnpx modern-web-guidance@1.0.1 *`) specifically, never bare `npx *` or `pnpx *`.
+- **Runner & Permissions**: Prefer `pnpx` over `npx` if `pnpm` is available (`pnpx` does not use `-y`); on Windows, use `npx.cmd`. When requesting tool permissions, allowlist `DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 *` (or `DISABLE_TELEMETRY=1 pnpx modern-web-guidance@1.0.1 *`) specifically, never bare `npx *` or `pnpx *`. Every runner keeps telemetry off: on Windows, set it first (PowerShell `$env:DISABLE_TELEMETRY='1'`; cmd `set DISABLE_TELEMETRY=1`).
 - **Sandboxes & Network**: Fetching `modern-web-guidance` requires outbound network access. In sandboxed or approval-gated environments (e.g., Codex, Claude Code), **proactively request approval/allowlisting with network access BEFORE the first execution** to avoid timeouts, and set `NPM_CONFIG_CACHE=/tmp/npm-cache` if `~/.npm` is read-only.
 - **Offline**: If the command hangs due to being offline, retry with `npx --offline …`.
 

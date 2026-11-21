@@ -297,13 +297,13 @@
       "adaptations": [
         "Omit guides/: the pinned npm CLI bundles the same guides and its search index.",
         "Replace the 'MANDATORY: Execute FIRST' trigger with a scoped one; AGENTS.md decides when the skill applies.",
-        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and prefix DISABLE_TELEMETRY=1 so search queries are not sent to Google.",
+        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and keep DISABLE_TELEMETRY=1 on every runner (npx, pnpx, allowlist patterns, Windows shells) so search queries are not sent to Google.",
         "Write the usage disclosure at the end of the task's output.md (feeds the PR description) instead of the chat reply.",
         "Copy the repository root LICENSE because the skill folder ships none."
       ],
       "files": {
         "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-        "SKILL.md": "736a2f945fedf86c8e812df62b98c9b8f366fb978a88c5e8dc1dbfde27ab13ed"
+        "SKILL.md": "f319b33471fb76ef9437e1a09f0d8e14bb4f5cdfbf8cae937321ffa40c890d16"
       }
     },
     {
