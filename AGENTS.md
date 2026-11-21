@@ -13,7 +13,7 @@ A portfolio/reference payment platform. Financial correctness beats convenience.
 | Size | What counts | Read | Verify | Review |
 | --- | --- | --- | --- | --- |
 | **T0 trivial** | Copy, typo, label/style, comment or doc wording; no behavior change | This file and the touched files | Cheapest relevant check | Re-read the diff |
-| **T1 standard** | Bug fix, UI change, small feature or refactor outside T2 areas | T0 + `package.json`, the matrix row's code entry points, the one document owning the behavior | [Verification commands](#verification-commands) for the touched package | `ponytail-review` of your own diff |
+| **T1 standard** | Bug fix, UI change, small feature or refactor outside T2 areas | T0 + `package.json`, `GLOSSARY.md`, the matrix row's code entry points, the one document owning the behavior | [Verification commands](#verification-commands) for the touched package | `ponytail-review` of your own diff |
 | **T2 high-risk** | Money movement, ledger, settlement/refund/dispute/payout, migrations/schema, auth/tenancy, concurrency/locks, idempotency/retries, outbox/inbox/workers, runtime module wiring, provider integration, data deletion, security | T1 + `README.md`, every document in the matrix row, and any [approved decision record](docs/AGENT_START_HERE.md#approved-decision-records) whose invariants the change could affect | T1 + Docker integration when database, queue or transaction behavior changes | `independent-review` |
 
 Skill text saying "non-trivial" means T1 or T2. A bug with an unknown cause takes the size of its area. Verification follows the boundary actually touched: a T2-area change that alters no database, queue or transaction behavior still gets T2 reading and review, but not Docker.
@@ -73,28 +73,30 @@ Load a skill only when its row applies; it then owns the procedure. Prefer repos
 | `grilling` | A T2 task, or a T1 product decision, still has unresolved design choices |
 | `codebase-design` | Designing a module interface or seam (T2 plans, deliberate refactors); there it outranks `ponytail` |
 | `domain-modeling` | Changing domain terms (`GLOSSARY.md`) or recording a decision (`docs/adr/`) |
+| `grill-with-docs` | Only on request |
 | `supabase-postgres-best-practices` | SQL, indexes, schema, transactions, locking or connections (PostgreSQL-general; never assume Supabase) |
 | `independent-review` | Fresh Opus 5.5 review: T2 diffs, T2 designs, CI or guard changes |
-| `ship-pr` | A finished task branch: task reports, final verification, PR description, push after authorization, post-merge cleanup |
+| `ship-pr` | Finishing a task branch, through push after authorization and post-merge cleanup |
 | `ui-taste` | Building, polishing, auditing or reviewing UI; `docs/ui-signature.md` is the visual authority |
 | `frontend-design` | Only when the user asks for a new UI or a full redesign; it then leads, not `ui-taste` |
-| `vercel-react-best-practices` | T1/T2 React/Next.js behavior, data fetching, rendering or performance; read only the needed `rules/` |
+| `vercel-react-best-practices` | T1/T2 React/Next.js data fetching, rendering or performance; read only the needed `rules/` |
+| `modern-web-guidance` | T1/T2 web UI relying on a browser platform feature |
 | `ponytail-audit` | An explicitly requested repository-wide audit |
 | `improve-codebase-architecture` | Only when the user asks for an architecture review |
 | `engineering-workflow` | Only when the user asks for it |
 
-- **T2 plans.** For T2 changes to schema, money semantics, locking or idempotency: write `.tmp/<slug>/plan.md` (≤200 lines: invariants, transaction boundaries, test matrix), run `independent-review` on it as a design, and get the user's approval before implementing. For a T2 task that spans several checkpoints, combines a migration with runtime changes or is likely to be interrupted, recommend `engineering-workflow` in one line and ask first.
+- **T2 plans.** For T2 changes to schema, money semantics, locking or idempotency: write `.tmp/<slug>/plan.md` (≤200 lines: invariants, transaction boundaries, test matrix), run `independent-review` on it as a design, and get the user's approval before implementing. For T2 work spanning several checkpoints (such as a migration plus runtime changes), recommend `engineering-workflow` in one line and ask first.
 - **Reviews.** Changes touching auth, tenancy, billing/payments or secrets also get Claude Code's `/security-review`. Report findings before fixing them.
 - **Browser checks.** With a browser tool, check user-facing changes on `pnpm dev:web`; otherwise report them NOT RUN.
 
 ## Files and artifacts
 
 - Default to no new files. Plans, reviews and evidence go in the chat, commit messages or the PR description.
-- Temporary files live only in the ignored `.tmp/<task-slug>/` of their task (`engineering-workflow`: `.tmp/agent-workflows/<task-slug>/`), never in `.tmp/` itself or tracked paths. The allowed files are the task reports and drafts listed in `ship-pr`, and `engineering-workflow`'s own set in its step 3. No full test-runner output, duplicate logs, source snapshots or diff copies.
+- Temporary files live only in the ignored `.tmp/<task-slug>/` of their task (`engineering-workflow`: `.tmp/agent-workflows/<task-slug>/`), never in `.tmp/` itself or tracked paths. Allowed: the `ship-pr` task reports and drafts, and `engineering-workflow`'s step-3 set. No full test-runner output, duplicate logs, source snapshots or diff copies.
 - A task's `.tmp` files are its resume source: delete them only when it is finalized (merged, rejected, or explicitly abandoned), as `ship-pr` step 8 does. Never read or reuse another task's `.tmp` unless asked. At the end of a session, list what remains and why.
-- Size limits: plan ≤200 lines, review report findings only and ≤150 lines, decision entry ≤1 page; needing more means splitting the task.
-- New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. Domain terms go in `GLOSSARY.md` and decisions in `docs/adr/`, as `domain-modeling` describes.
-- `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Ripgrep-based search skips `docs/audits/` (`.rgignore`); search it by path when needed. Never read whole folders for context.
+- Size limits: review report findings only and ≤150 lines, decision entry ≤1 page; needing more means splitting the task.
+- New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. Use `GLOSSARY.md` terms in code, tests and PRs; record new terms there and decisions in `docs/adr/` in the same PR (`domain-modeling`), and flag ADR conflicts.
+- `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Ripgrep skips `docs/audits/`; search it by path. Never read whole folders for context.
 
 ## Git and PRs
 
@@ -112,4 +114,4 @@ Load a skill only when its row applies; it then owns the procedure. Prefer repos
 
 ## Maintaining this file
 
-Add a rule only after a real failure that a script, CI check or skill cannot catch; prefer enforcing it in tooling. A procedure belongs in its skill, a command detail in [verification](docs/verification.md). Keep this file at or below its current size (about 1,700 words) and remove rules agents follow without being told.
+Add a rule only after a real failure that tooling or a skill cannot catch. A procedure belongs in its skill, a command detail in [verification](docs/verification.md). Keep this file at or below its current size (about 1,700 words) and remove rules agents follow without being told.

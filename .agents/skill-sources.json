@@ -103,6 +103,20 @@
       }
     },
     {
+      "name": "grill-with-docs",
+      "repository": "https://github.com/mattpocock/skills",
+      "revision": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "path": "skills/engineering/grill-with-docs",
+      "tree": "eedaf2562c83155115e9c649fa3ecaac2e10e81d",
+      "installedFrom": "official upstream (pinned revision)",
+      "license": "MIT",
+      "files": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
+        "agents/openai.yaml": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9"
+      }
+    },
+    {
       "name": "systematic-debugging",
       "repository": "https://github.com/obra/superpowers",
       "revision": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
@@ -270,6 +284,26 @@
         "rules/server-parallel-fetching.md": "569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472",
         "rules/server-parallel-nested-fetching.md": "ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3",
         "rules/server-serialization.md": "f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f"
+      }
+    },
+    {
+      "name": "modern-web-guidance",
+      "repository": "https://github.com/GoogleChrome/modern-web-guidance",
+      "revision": "64a6d708f5a43f2cd3fde5d4d7db3905ba1bdf65",
+      "path": "skills/modern-web-guidance",
+      "tree": "7c7d6612af788857352d452ebe263ad462351658",
+      "installedFrom": "official upstream (pinned revision); SKILL.md byte-identical to the npm package modern-web-guidance@1.0.1 (integrity sha512-5ztUh5F1p2PewnSkA6EhsGUXqomaZY9qe6iWJCU4JbIQxHTky7s5lMJcPE4EbD1uhbQZIhl0HROH0+s6fIiGzg==), which the commands now pin",
+      "license": "Apache-2.0",
+      "adaptations": [
+        "Omit guides/: the pinned npm CLI bundles the same guides and its search index.",
+        "Replace the 'MANDATORY: Execute FIRST' trigger with a scoped one; AGENTS.md decides when the skill applies.",
+        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and prefix DISABLE_TELEMETRY=1 so search queries are not sent to Google.",
+        "Write the usage disclosure at the end of the task's output.md (feeds the PR description) instead of the chat reply.",
+        "Copy the repository root LICENSE because the skill folder ships none."
+      ],
+      "files": {
+        "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "SKILL.md": "736a2f945fedf86c8e812df62b98c9b8f366fb978a88c5e8dc1dbfde27ab13ed"
       }
     },
     {
