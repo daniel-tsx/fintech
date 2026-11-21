@@ -292,18 +292,19 @@
       "revision": "64a6d708f5a43f2cd3fde5d4d7db3905ba1bdf65",
       "path": "skills/modern-web-guidance",
       "tree": "7c7d6612af788857352d452ebe263ad462351658",
-      "installedFrom": "official upstream (pinned revision); SKILL.md byte-identical to the npm package modern-web-guidance@1.0.1 (integrity sha512-5ztUh5F1p2PewnSkA6EhsGUXqomaZY9qe6iWJCU4JbIQxHTky7s5lMJcPE4EbD1uhbQZIhl0HROH0+s6fIiGzg==), which the commands now pin",
+      "installedFrom": "official upstream (pinned revision); the upstream SKILL.md at this revision is byte-identical to the npm package modern-web-guidance@1.0.1 (integrity sha512-5ztUh5F1p2PewnSkA6EhsGUXqomaZY9qe6iWJCU4JbIQxHTky7s5lMJcPE4EbD1uhbQZIhl0HROH0+s6fIiGzg==), which the commands now pin",
       "license": "Apache-2.0",
       "adaptations": [
         "Omit guides/: the pinned npm CLI bundles the same guides and its search index.",
         "Replace the 'MANDATORY: Execute FIRST' trigger with a scoped one; AGENTS.md decides when the skill applies.",
-        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and keep DISABLE_TELEMETRY=1 on every runner (npx, pnpx, allowlist patterns, Windows shells) so search queries are not sent to Google.",
+        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and keep DISABLE_TELEMETRY=1 on every runner and subcommand (search, retrieve, list, legacy-scan; npx, pnpx, allowlist patterns, Windows shells) so usage and queries are not sent to Google.",
         "Write the usage disclosure at the end of the task's output.md (feeds the PR description) instead of the chat reply.",
+        "Point the browser-support policy suggestion at docs/ui-signature.md instead of AGENTS.md or CLAUDE.md.",
         "Copy the repository root LICENSE because the skill folder ships none."
       ],
       "files": {
         "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-        "SKILL.md": "f319b33471fb76ef9437e1a09f0d8e14bb4f5cdfbf8cae937321ffa40c890d16"
+        "SKILL.md": "cede4935b7bf4cb5d578bf4e1227fe16ba47ad93812d2c2dff43a30326888380"
       }
     },
     {

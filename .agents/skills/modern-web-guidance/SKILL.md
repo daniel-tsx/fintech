@@ -25,7 +25,7 @@ DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 search "<query>" --skill-ve
 
 > **Note**: Returns `[{ "id", "description" }, ...]`. Judge results by their `description` fields:
 > - **Match found**: Call `retrieve` directly—do not also run `list`.
-> - **Weak or empty results**: If `search` returns `[]` or unrelated descriptions, **rephrase `search` once** using the concrete HTML/CSS/UI component noun or synonym (e.g., `dialog`, `modal`, `popover`, `table`, `form`) before falling back to `list` (or use `list` once for broad UI audits).
+> - **Weak or empty results**: If `search` returns `[]` or unrelated descriptions, **rephrase `search` once** using the concrete HTML/CSS/UI component noun or synonym (e.g., `dialog`, `modal`, `popover`, `table`, `form`) before falling back to `list` (`DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 list`), or use `list` once for broad UI audits.
 > - **Topic not covered**: If no `description` matches after rephrasing, proceed without retrieving unrelated guides.
 
 ### Step 2. Retrieve Best Practices
@@ -87,4 +87,4 @@ DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 legacy-scan <path> --json
 
 * **Default Behavior**: All guides assume **Baseline Widely available** features are safe to use without fallbacks. For features that are not Baseline widely available, you **MUST** follow the fallback recommendations in the guide, unless the user has specified a custom browser support policy.
 * **Custom Policies**: If the user defines explicit browser support requirements, use the guide's compatibility data to determine if a fallback can be ignored (for `Baseline YYYY` targets, a feature satisfies the target if its "Baseline since" date is `<= YYYY`). Examples: _"Do not implement feature fallbacks"_, _"Safari 17.4+"_, _"Never implement polyfills; use a lightweight custom fallback or redesign"_, or _"Allow Newly Available features if feature-detected with graceful degradation"_.
-* **Reactive Policy Discovery**: Suggest documenting a policy in `AGENTS.md` or `CLAUDE.md` (e.g., `**Browser Support:** Allow Newly Available features, but only adopt custom fallback code that adds <= 20 lines and no external dependencies`) if the developer targets a restricted runtime (Electron/Tauri), excludes specific browsers, hesitates over polyfill size/complexity, or asks if a feature is safe without fallbacks.
+* **Reactive Policy Discovery**: Suggest documenting a policy in the *Browser support* section of `docs/ui-signature.md` (e.g., `**Browser Support:** Allow Newly Available features, but only adopt custom fallback code that adds <= 20 lines and no external dependencies`) if the developer targets a restricted runtime (Electron/Tauri), excludes specific browsers, hesitates over polyfill size/complexity, or asks if a feature is safe without fallbacks.
