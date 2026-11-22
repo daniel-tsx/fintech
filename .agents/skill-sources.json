@@ -297,14 +297,15 @@
       "adaptations": [
         "Omit guides/: the pinned npm CLI bundles the same guides and its search index.",
         "Replace the 'MANDATORY: Execute FIRST' trigger with a scoped one; AGENTS.md decides when the skill applies.",
-        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and keep DISABLE_TELEMETRY=1 on every runner and subcommand (search, retrieve, list, legacy-scan; npx, pnpx, allowlist patterns, Windows shells) so usage and queries are not sent to Google.",
+        "Pin commands to modern-web-guidance@1.0.1 (matching --skill-version) instead of @latest, and keep DISABLE_TELEMETRY=1 on every runner and subcommand (search, retrieve, list, legacy-scan, the offline fallback and the CLI's opt-in commands; npx, pnpx, allowlist patterns, Windows shells) so usage and queries are not sent to Google.",
         "Write the usage disclosure at the end of the task's output.md (feeds the PR description) instead of the chat reply.",
         "Point the browser-support policy suggestion at docs/ui-signature.md instead of AGENTS.md or CLAUDE.md.",
+        "Add a CLI opt-ins rule: set-allow-volatile-features and set-baseline run only after the user agrees, pinned with telemetry off; the policy is recorded in docs/ui-signature.md and the CLI's .mwgrc stays git-ignored.",
         "Copy the repository root LICENSE because the skill folder ships none."
       ],
       "files": {
         "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
-        "SKILL.md": "cede4935b7bf4cb5d578bf4e1227fe16ba47ad93812d2c2dff43a30326888380"
+        "SKILL.md": "abffb1860327a854936d59f3370dcac259ba2e1eb1be8ad6dddbf60a4dd1c805"
       }
     },
     {

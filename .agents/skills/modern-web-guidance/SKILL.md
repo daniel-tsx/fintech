@@ -73,7 +73,7 @@ DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 legacy-scan <path> --json
 
 - **Runner & Permissions**: Prefer `pnpx` over `npx` if `pnpm` is available (`pnpx` does not use `-y`); on Windows, use `npx.cmd`. When requesting tool permissions, allowlist `DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 *` (or `DISABLE_TELEMETRY=1 pnpx modern-web-guidance@1.0.1 *`) specifically, never bare `npx *` or `pnpx *`. Every runner keeps telemetry off: on Windows, set it first (PowerShell `$env:DISABLE_TELEMETRY='1'`; cmd `set DISABLE_TELEMETRY=1`).
 - **Sandboxes & Network**: Fetching `modern-web-guidance` requires outbound network access. In sandboxed or approval-gated environments (e.g., Codex, Claude Code), **proactively request approval/allowlisting with network access BEFORE the first execution** to avoid timeouts, and set `NPM_CONFIG_CACHE=/tmp/npm-cache` if `~/.npm` is read-only.
-- **Offline**: If the command hangs due to being offline, retry with `npx --offline …`.
+- **Offline**: If the command hangs due to being offline, retry with `DISABLE_TELEMETRY=1 npx --offline -y modern-web-guidance@1.0.1 …`.
 
 ## Guidelines
 
@@ -87,4 +87,5 @@ DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 legacy-scan <path> --json
 
 * **Default Behavior**: All guides assume **Baseline Widely available** features are safe to use without fallbacks. For features that are not Baseline widely available, you **MUST** follow the fallback recommendations in the guide, unless the user has specified a custom browser support policy.
 * **Custom Policies**: If the user defines explicit browser support requirements, use the guide's compatibility data to determine if a fallback can be ignored (for `Baseline YYYY` targets, a feature satisfies the target if its "Baseline since" date is `<= YYYY`). Examples: _"Do not implement feature fallbacks"_, _"Safari 17.4+"_, _"Never implement polyfills; use a lightweight custom fallback or redesign"_, or _"Allow Newly Available features if feature-detected with graceful degradation"_.
+* **CLI Opt-ins**: If a guide's CAUTION gate suggests `set-allow-volatile-features` or `set-baseline`, ask the user first. Run it only as `DISABLE_TELEMETRY=1 npx -y modern-web-guidance@1.0.1 <command>`, and record the resulting policy in the *Browser support* section of `docs/ui-signature.md`; the `.mwgrc` file it writes stays local (git-ignored).
 * **Reactive Policy Discovery**: Suggest documenting a policy in the *Browser support* section of `docs/ui-signature.md` (e.g., `**Browser Support:** Allow Newly Available features, but only adopt custom fallback code that adds <= 20 lines and no external dependencies`) if the developer targets a restricted runtime (Electron/Tauri), excludes specific browsers, hesitates over polyfill size/complexity, or asks if a feature is safe without fallbacks.
