@@ -106,6 +106,10 @@ Motion is 120–180ms ease-out and only explains a change:
 - Status, current page and selection never rely on colour alone: glyph plus label for status, `aria-current`/`aria-selected` plus a visual mark; in Windows high-contrast mode those marks become outlines.
 - Tables have captions and column scopes; sortable headers expose `aria-sort`; the palette follows the combobox pattern; shortened IDs carry the full value for screen readers.
 
+## Browser support
+
+Baseline Widely available features are used without fallbacks. A newer feature follows the fallback its `modern-web-guidance` guide prescribes. Changing this policy is a decision for the owner, recorded here.
+
 ## States
 
 Empty states name the next financial event that will appear. The offline state lists the local commands to start the stack. Loading skeletons keep the heading and pane geometry. Error screens say the underlying record was not changed and how to retry.
