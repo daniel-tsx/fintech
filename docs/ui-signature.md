@@ -108,7 +108,7 @@ Motion is 120–180ms ease-out and only explains a change:
 
 ## Browser support
 
-Baseline Widely available features are used without fallbacks. A newer feature follows the fallback its `modern-web-guidance` guide prescribes. Changing this policy is a decision for the owner, recorded here; the CLI's `.mwgrc` is local to one worktree, git-ignored, and only mirrors it.
+Baseline Widely available features are used without fallbacks. A newer feature follows the fallback its `modern-web-guidance` guide prescribes. Changing this policy is a decision for the owner, recorded here; the CLI's `.mwgrc` is local to one worktree and git-ignored. A gate opt-in there is a per-task decision the user makes and the PR discloses, and this section wins over a conflicting `.mwgrc` baseline banner.
 
 ## States
 
