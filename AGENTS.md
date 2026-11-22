@@ -20,7 +20,7 @@ Skill text saying "non-trivial" means T1 or T2. A bug with an unknown cause take
 
 ## Verification commands
 
-Run from the root of your worktree; [verification](docs/verification.md) owns setup and failure details.
+Run from your worktree root; [verification](docs/verification.md) owns setup and failure details.
 
 | Scope | Commands |
 | --- | --- |
@@ -95,7 +95,7 @@ Load a skill only when its row applies; it then owns the procedure. Prefer repos
 - Temporary files live only in the ignored `.tmp/<task-slug>/` of their task (`engineering-workflow`: `.tmp/agent-workflows/<task-slug>/`), never in `.tmp/` itself or tracked paths. Allowed: the `ship-pr` task reports and drafts, and `engineering-workflow`'s step-3 set. No full test-runner output, duplicate logs, source snapshots or diff copies.
 - A task's `.tmp` files are its resume source: delete them only when it is finalized (merged, rejected, or explicitly abandoned), as `ship-pr` step 8 does. Never read or reuse another task's `.tmp` unless asked. At the end of a session, list what remains and why.
 - Size limits: review report findings only and ≤150 lines, decision entry ≤1 page; needing more means splitting the task.
-- New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. Use `GLOSSARY.md` terms in code, tests and PRs; record new terms there and decisions in `docs/adr/` in the same PR (`domain-modeling`), and flag ADR conflicts.
+- New Markdown files only when the user asks or a new subsystem has no owning document; otherwise edit the owning document. Nothing per-round or per-review goes into `docs/`, and no run logs go into `docs/verification.md`. Use `GLOSSARY.md` terms in code, tests and PRs; record new terms there and decisions in `docs/adr/` in the same PR (`domain-modeling`); T2 also flags ADR conflicts.
 - `docs/audits/` and `docs/archive/` are historical: read them only when the task names a file, or for the approved decision records T2 requires. Ripgrep skips `docs/audits/`; search it by path. Never read whole folders for context.
 
 ## Git and PRs
